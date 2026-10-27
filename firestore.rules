@@ -1,0 +1,45 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for user authentication and authorization checks
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidOrder() {
+      let data = request.resource.data;
+      return data.id is string
+        && data.userId == request.auth.uid
+        && data.platformName is string
+        && data.platformOrderId is string
+        && data.productName is string
+        && data.price is number
+        && data.price >= 0
+        && data.status is string
+        && data.orderedAt is string;
+    }
+
+    // User profile documents
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      // Private, user-isolated orders subcollection
+      match /orders/{orderId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidOrder();
+        allow update: if isOwner(userId) && isValidOrder();
+        allow delete: if isOwner(userId);
+      }
+    }
+
+    // Explicitly deny all other access to protect root and non-user paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

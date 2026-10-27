@@ -1,0 +1,52 @@
+name: track_my_order
+description: "Track My Order - Premium multi-platform order tracking application."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management
+  provider: ^6.1.2
+
+  # Navigation
+  go_router: ^14.6.1
+
+  # Local persistence
+  shared_preferences: ^2.3.2
+
+  # Unique ID generation
+  uuid: ^4.5.1
+
+  # Internationalisation / date & currency formatting
+  intl: ^0.20.1
+
+  # Network images with cache and error fallback
+  cached_network_image: ^3.4.1
+
+  # URL launcher for tracking / order links
+  url_launcher: ^6.3.1
+
+  # Map (OpenStreetMap – no API key required)
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+
+  # Icons
+  cupertino_icons: ^1.0.8
+  mobile_scanner: ^7.4.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  # assets:
+  #   - assets/images/
+  #   - assets/illustrations/
