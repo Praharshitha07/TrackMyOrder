@@ -3,8 +3,10 @@ import 'package:provider/provider.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/orders_provider.dart';
+import 'repositories/hybrid_order_repository.dart';
 import 'repositories/local_order_repository.dart';
-import 'repositories/local_auth_repository.dart';
+import 'repositories/firestore_order_repository.dart';
+import 'repositories/firebase_auth_repository.dart';
 import 'screens/shell/app_router.dart';
 
 class TrackMyOrderApp extends StatefulWidget {
@@ -21,8 +23,13 @@ class _TrackMyOrderAppState extends State<TrackMyOrderApp> {
   @override
   void initState() {
     super.initState();
-    _authProvider = AuthProvider(LocalAuthRepository());
-    _ordersProvider = OrdersProvider(LocalOrderRepository());
+    _authProvider = AuthProvider(FirebaseAuthRepository());
+    _ordersProvider = OrdersProvider(
+        HybridOrderRepository(
+          LocalOrderRepository(),
+          FirestoreOrderRepository(),
+        ),
+      );
     // Initialize auth state
     _authProvider.initialize().then((_) {
       _ordersProvider.loadOrders(_authProvider.effectiveUserId);

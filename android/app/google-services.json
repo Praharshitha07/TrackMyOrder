@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "642034022464",
+    "project_id": "trackmyorder-ab1cb",
+    "storage_bucket": "trackmyorder-ab1cb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:642034022464:android:7dd3b27b47f317047f87a5",
+        "android_client_info": {
+          "package_name": "com.trackmyorder.track_my_order"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD9nbdfWu0UMC5yAKDkp_kH3G1z0gNh_SE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
