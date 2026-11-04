@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/orders_provider.dart';
@@ -61,7 +62,7 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
     try {
       final jsonString = ExportService.generateJson(
         orders,
-        exportedBy: auth.user?.email ?? 'guest_user',
+        exportedBy: auth.user?.email,
       );
       final dateStamp = DateFormat('yyyy-MM-dd').format(DateTime.now());
       final fileName = 'track_my_order_backup_$dateStamp.json';
@@ -86,10 +87,7 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
 
   void _showMessage(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        behavior: SnackBarBehavior.floating,
-      ),
+      SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
     );
   }
 
@@ -123,8 +121,11 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
                           color: AppTheme.electricLime.withValues(alpha: 0.12),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.backup_outlined,
-                            size: 24, color: AppTheme.electricLime),
+                        child: const Icon(
+                          Icons.backup_outlined,
+                          size: 24,
+                          color: AppTheme.electricLime,
+                        ),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -158,8 +159,7 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
                 // CSV Export Option
                 _ExportFormatCard(
                   title: 'Export as CSV (Spreadsheet)',
-                  description:
-                      'Compatible with Microsoft Excel, Google Sheets, and Numbers. Includes dates, amounts, courier details, and tracking codes.',
+                  description: 'Compatible with Microsoft Excel, Google Sheets, and Numbers. Includes dates, amounts, courier details, and tracking codes.',
                   icon: Icons.table_chart_outlined,
                   buttonLabel: 'Generate CSV Backup',
                   isLoading: _isExporting,
@@ -170,8 +170,7 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
                 // JSON Export Option
                 _ExportFormatCard(
                   title: 'Export as JSON (Full Backup)',
-                  description:
-                      'Structured schema with complete timestamps, tracking event history, categories, and delivery reminder preferences.',
+                  description: 'Structured schema with complete timestamps, tracking event history, categories, and delivery reminder preferences.',
                   icon: Icons.data_object_outlined,
                   buttonLabel: 'Generate JSON Backup',
                   isLoading: _isExporting,
@@ -190,13 +189,20 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
                   child: const Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.security_outlined,
-                          size: 16, color: AppTheme.electricLime),
+                      Icon(
+                        Icons.security_outlined,
+                        size: 16,
+                        color: AppTheme.electricLime,
+                      ),
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'Export files contain only your order records. Passwords, API tokens, and internal keys are never serialized or exported.',
-                          style: TextStyle(fontSize: 11, color: AppTheme.textMuted, height: 1.4),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.textMuted,
+                            height: 1.4,
+                          ),
                         ),
                       ),
                     ],
@@ -257,7 +263,11 @@ class _ExportFormatCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             description,
-            style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary, height: 1.4),
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppTheme.textSecondary,
+              height: 1.4,
+            ),
           ),
           const SizedBox(height: 16),
           SizedBox(

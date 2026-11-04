@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_theme.dart';
 
 /// Attractive empty-state widget with icon, title, and optional action.
@@ -90,13 +91,13 @@ class ErrorState extends StatelessWidget {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: const Color(0xFFF87171).withValues(alpha: 0.1),
+                color: AppTheme.error.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.error_outline,
                 size: 40,
-                color: Color(0xFFF87171),
+                color: AppTheme.error,
               ),
             ),
             const SizedBox(height: 20),

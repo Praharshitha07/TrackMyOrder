@@ -6,25 +6,25 @@ import 'app.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
-WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
 
-await Firebase.initializeApp(
-options: DefaultFirebaseOptions.currentPlatform,
-);
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-await SystemChrome.setPreferredOrientations([
-DeviceOrientation.portraitUp,
-DeviceOrientation.portraitDown,
-DeviceOrientation.landscapeLeft,
-DeviceOrientation.landscapeRight,
-]);
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
+  ]);
 
-SystemChrome.setSystemUIOverlayStyle(
-const SystemUiOverlayStyle(
-statusBarColor: Colors.transparent,
-statusBarIconBrightness: Brightness.light,
-),
-);
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Color(0xFFF8F3EC),
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
+  );
 
-runApp(const TrackMyOrderApp());
+  runApp(const TrackMyOrderApp());
 }

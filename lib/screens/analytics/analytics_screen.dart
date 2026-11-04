@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/empty_state.dart';
 import '../../core/utils/format_utils.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/orders_provider.dart';
 import '../../services/analytics/analytics_service.dart';
 
@@ -35,7 +38,16 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           ),
         ],
       ),
-      body: data.isEmpty
+      body: ordersProvider.loadState == OrdersLoadState.error
+          ? ErrorState(
+              message:
+                  ordersProvider.error ??
+                  'Could not load analytics from Firestore.',
+              onRetry: () => ordersProvider.loadOrders(
+                context.read<AuthProvider>().effectiveUserId,
+              ),
+            )
+          : data.isEmpty
           ? Center(
               child: Padding(
                 padding: const EdgeInsets.all(32.0),
@@ -97,12 +109,19 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         ),
                         child: const Row(
                           children: [
-                            Icon(Icons.info_outline, size: 16, color: AppTheme.electricLime),
+                            Icon(
+                              Icons.info_outline,
+                              size: 16,
+                              color: AppTheme.electricLime,
+                            ),
                             SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 'Calculated from saved orders. Cancelled orders are excluded from total spending.',
-                                style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.textSecondary,
+                                ),
                               ),
                             ),
                           ],
@@ -121,21 +140,30 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         children: [
                           _MetricCard(
                             label: 'Total Spending',
-                            value: CurrencyUtils.format(data.totalSpending, 'INR'),
+                            value: CurrencyUtils.format(
+                              data.totalSpending,
+                              'INR',
+                            ),
                             icon: Icons.payments_outlined,
                             color: AppTheme.electricLime,
                           ),
                           _MetricCard(
                             label: 'Avg Order Value',
-                            value: CurrencyUtils.format(data.averageOrderValue, 'INR'),
+                            value: CurrencyUtils.format(
+                              data.averageOrderValue,
+                              'INR',
+                            ),
                             icon: Icons.calculate_outlined,
-                            color: const Color(0xFF38BDF8),
+                            color: AppTheme.statusInTransit,
                           ),
                           _MetricCard(
                             label: 'This Month',
-                            value: CurrencyUtils.format(data.currentMonthSpending, 'INR'),
+                            value: CurrencyUtils.format(
+                              data.currentMonthSpending,
+                              'INR',
+                            ),
                             icon: Icons.calendar_month_outlined,
-                            color: const Color(0xFFA78BFA),
+                            color: AppTheme.statusPacked,
                           ),
                           _MetricCard(
                             label: 'Delivered Purchases',
@@ -148,20 +176,29 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       const SizedBox(height: 28),
 
                       // Spending by Platform
-                      Text('Spending by Platform', style: theme.textTheme.headlineSmall),
+                      Text(
+                        'Spending by Platform',
+                        style: theme.textTheme.headlineSmall,
+                      ),
                       const SizedBox(height: 12),
                       _PlatformSpendingCard(data: data),
                       const SizedBox(height: 28),
 
                       // Spending by Category
-                      Text('Spending by Category', style: theme.textTheme.headlineSmall),
+                      Text(
+                        'Spending by Category',
+                        style: theme.textTheme.headlineSmall,
+                      ),
                       const SizedBox(height: 12),
                       _CategorySpendingCard(data: data),
                       const SizedBox(height: 28),
 
                       // Monthly Expenditure History
                       if (data.monthlySpending.isNotEmpty) ...[
-                        Text('Monthly Expenditure', style: theme.textTheme.headlineSmall),
+                        Text(
+                          'Monthly Expenditure',
+                          style: theme.textTheme.headlineSmall,
+                        ),
                         const SizedBox(height: 12),
                         _MonthlySpendingCard(months: data.monthlySpending),
                         const SizedBox(height: 32),
@@ -203,7 +240,13 @@ class _MetricCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
               Icon(icon, size: 16, color: color),
             ],
           ),
@@ -243,7 +286,9 @@ class _PlatformSpendingCard extends StatelessWidget {
           final platform = entry.key;
           final amount = entry.value;
           final orderCount = data.ordersByPlatform[platform] ?? 0;
-          final pct = data.totalSpending > 0 ? (amount / data.totalSpending) : 0.0;
+          final pct = data.totalSpending > 0
+              ? (amount / data.totalSpending)
+              : 0.0;
           final color = AppTheme.platformColor(platform);
 
           return Padding(
@@ -256,16 +301,36 @@ class _PlatformSpendingCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Icon(AppTheme.platformIcon(platform), size: 16, color: color),
+                        Icon(
+                          AppTheme.platformIcon(platform),
+                          size: 16,
+                          color: color,
+                        ),
                         const SizedBox(width: 8),
-                        Text(platform, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                        Text(
+                          platform,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
                         const SizedBox(width: 6),
-                        Text('($orderCount)', style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                        Text(
+                          '($orderCount)',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.textMuted,
+                          ),
+                        ),
                       ],
                     ),
                     Text(
                       CurrencyUtils.format(amount, 'INR'),
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppTheme.cloudWhite),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: AppTheme.cloudWhite,
+                      ),
                     ),
                   ],
                 ),
@@ -309,7 +374,9 @@ class _CategorySpendingCard extends StatelessWidget {
           final category = entry.key;
           final amount = entry.value;
           final count = data.ordersByCategory[category] ?? 0;
-          final pct = data.totalSpending > 0 ? (amount / data.totalSpending) : 0.0;
+          final pct = data.totalSpending > 0
+              ? (amount / data.totalSpending)
+              : 0.0;
 
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -321,16 +388,35 @@ class _CategorySpendingCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.category_outlined, size: 15, color: AppTheme.electricLime),
+                        const Icon(
+                          Icons.category_outlined,
+                          size: 15,
+                          color: AppTheme.electricLime,
+                        ),
                         const SizedBox(width: 8),
-                        Text(category, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
+                        Text(
+                          category,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w500,
+                            fontSize: 13,
+                          ),
+                        ),
                         const SizedBox(width: 6),
-                        Text('($count)', style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                        Text(
+                          '($count)',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.textMuted,
+                          ),
+                        ),
                       ],
                     ),
                     Text(
                       CurrencyUtils.format(amount, 'INR'),
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
@@ -341,7 +427,9 @@ class _CategorySpendingCard extends StatelessWidget {
                     value: pct,
                     minHeight: 6,
                     backgroundColor: AppTheme.surfaceVariant,
-                    valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.electricLime),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      AppTheme.electricLime,
+                    ),
                   ),
                 ),
               ],
@@ -359,7 +447,9 @@ class _MonthlySpendingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final maxAmount = months.map((m) => m.amount).fold<double>(0.0, (prev, elem) => elem > prev ? elem : prev);
+    final maxAmount = months
+        .map((m) => m.amount)
+        .fold<double>(0.0, (prev, elem) => elem > prev ? elem : prev);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -379,10 +469,19 @@ class _MonthlySpendingCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(m.label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                    Text(
+                      m.label,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
                     Text(
                       '${CurrencyUtils.format(m.amount, 'INR')} (${m.orderCount} orders)',
-                      style: const TextStyle(fontSize: 12, color: AppTheme.electricLime),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.electricLime,
+                      ),
                     ),
                   ],
                 ),
@@ -393,7 +492,9 @@ class _MonthlySpendingCard extends StatelessWidget {
                     value: pct,
                     minHeight: 8,
                     backgroundColor: AppTheme.surfaceVariant,
-                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF38BDF8)),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppTheme.statusInTransit,
+                    ),
                   ),
                 ),
               ],

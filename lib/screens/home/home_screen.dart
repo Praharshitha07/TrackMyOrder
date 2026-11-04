@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/order_card.dart';
 import '../../core/widgets/skeletons.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/orders_provider.dart';
-import '../../core/constants/app_constants.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,7 +28,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadOrders() async {
     final auth = context.read<AuthProvider>();
     final orders = context.read<OrdersProvider>();
-    if (orders.loadState == OrdersLoadState.idle) {
+    if (orders.loadState == OrdersLoadState.idle ||
+        orders.loadState == OrdersLoadState.error) {
       await orders.loadOrders(auth.effectiveUserId);
     }
   }
@@ -87,9 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             // Avatar
                             GestureDetector(
                               onTap: () => context.go('/profile'),
-                              child: _Avatar(
-                                name: auth.user?.name ?? '',
-                              ),
+                              child: _Avatar(name: auth.user?.name ?? ''),
                             ),
                           ],
                         ),
@@ -121,55 +120,71 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
-                  // Demo notice
-                  _DemoNotice(orders: orders),
-
                   const SizedBox(height: 20),
                   Text('Overview', style: theme.textTheme.headlineSmall),
                   const SizedBox(height: 12),
 
                   // Summary cards
-                  orders.isLoading
-                      ? _buildSkeletonSummary(isWide)
-                      : _buildSummaryCards(context, orders, isWide),
+                  if (orders.loadState == OrdersLoadState.error)
+                    ErrorState(
+                      message:
+                          orders.error ??
+                          'Could not load your orders from Firestore.',
+                      onRetry: _loadOrders,
+                    )
+                  else if (orders.isLoading)
+                    _buildSkeletonSummary(isWide)
+                  else
+                    _buildSummaryCards(context, orders, isWide),
 
                   // Quick Action Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 5,
-                        child: FilledButton.icon(
+                  if (MediaQuery.sizeOf(context).width < 380)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        FilledButton.icon(
                           onPressed: () => context.push('/add-order'),
                           icon: const Icon(Icons.add_shopping_cart, size: 18),
                           label: const Text('Add Order'),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        flex: 4,
-                        child: OutlinedButton.icon(
+                        const SizedBox(height: 8),
+                        OutlinedButton.icon(
                           onPressed: () => context.go('/analytics'),
                           icon: const Icon(Icons.insights, size: 18),
                           label: const Text('Analytics'),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        flex: 4,
-                        child: OutlinedButton.icon(
-                          onPressed: () => context.go('/platforms'),
-                          icon: const Icon(Icons.storefront_outlined, size: 18),
-                          label: const Text('Platforms'),
+                      ],
+                    )
+                  else
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 5,
+                          child: FilledButton.icon(
+                            onPressed: () => context.push('/add-order'),
+                            icon: const Icon(Icons.add_shopping_cart, size: 18),
+                            label: const Text('Add Order'),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 4,
+                          child: OutlinedButton.icon(
+                            onPressed: () => context.go('/analytics'),
+                            icon: const Icon(Icons.insights, size: 18),
+                            label: const Text('Analytics'),
+                          ),
+                        ),
+                      ],
+                    ),
 
                   const SizedBox(height: 24),
                   Row(
                     children: [
-                      Text('Recent Orders',
-                          style: theme.textTheme.headlineSmall),
+                      Text(
+                        'Recent Orders',
+                        style: theme.textTheme.headlineSmall,
+                      ),
                       const Spacer(),
                       TextButton(
                         onPressed: () => context.go('/orders'),
@@ -186,6 +201,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   // Order list
                   if (orders.isLoading)
                     ...List.generate(3, (_) => const OrderCardSkeleton())
+                  else if (orders.loadState == OrdersLoadState.error)
+                    const SizedBox.shrink()
                   else if (orders.filteredOrders.isEmpty)
                     EmptyState(
                       icon: Icons.inventory_2_outlined,
@@ -196,7 +213,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       onAction: () => context.push('/add-order'),
                     )
                   else
-                    ...orders.filteredOrders.take(8).map(
+                    ...orders.filteredOrders
+                        .take(8)
+                        .map(
                           (o) => OrderCard(
                             order: o,
                             onTap: () => context.push('/order/${o.id}'),
@@ -231,7 +250,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildSummaryCards(
-      BuildContext context, OrdersProvider orders, bool isWide) {
+    BuildContext context,
+    OrdersProvider orders,
+    bool isWide,
+  ) {
     final cards = [
       _StatData(
         Icons.inventory_2_outlined,
@@ -290,8 +312,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _greeting(String? name) {
     final hour = DateTime.now().hour;
-    final salutation =
-        hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+    final salutation = hour < 12
+        ? 'Good morning'
+        : hour < 17
+        ? 'Good afternoon'
+        : 'Good evening';
     if (name != null && name.isNotEmpty) {
       return '$salutation, ${name.split(' ').first}! 👋';
     }
@@ -309,12 +334,12 @@ class _Avatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final initials = name.isNotEmpty
         ? name
-            .trim()
-            .split(' ')
-            .where((p) => p.isNotEmpty)
-            .take(2)
-            .map((p) => p[0].toUpperCase())
-            .join()
+              .trim()
+              .split(' ')
+              .where((p) => p.isNotEmpty)
+              .take(2)
+              .map((p) => p[0].toUpperCase())
+              .join()
         : '?';
 
     return Container(
@@ -365,8 +390,10 @@ class _SearchBar extends StatelessWidget {
                 },
               )
             : null,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
       ),
     );
   }
@@ -460,58 +487,9 @@ class _SummaryCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            Text(data.label,
-                style: Theme.of(context).textTheme.bodySmall),
+            Text(data.label, style: Theme.of(context).textTheme.bodySmall),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _DemoNotice extends StatelessWidget {
-  final OrdersProvider orders;
-  const _DemoNotice({required this.orders});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppTheme.electricLime.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(10),
-        border:
-            Border.all(color: AppTheme.electricLime.withValues(alpha: 0.18)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.shield_outlined,
-              size: 15, color: AppTheme.electricLime),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              AppConstants.demoModeNotice,
-              style: TextStyle(
-                fontSize: 12,
-                color: AppTheme.electricLime.withValues(alpha: 0.8),
-                height: 1.4,
-              ),
-            ),
-          ),
-          Switch(
-            value: orders.showDemoOrders,
-            onChanged: orders.toggleDemoOrders,
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-          Text(
-            'Demo',
-            style: TextStyle(
-              fontSize: 11,
-              color: AppTheme.electricLime.withValues(alpha: 0.7),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
       ),
     );
   }

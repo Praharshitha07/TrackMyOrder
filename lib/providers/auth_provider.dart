@@ -1,13 +1,14 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
+
 import '../models/user_model.dart';
 import '../repositories/auth_repository.dart';
 
-enum AuthState { unknown, authenticated, unauthenticated, guest }
+enum AuthState { unknown, authenticated, unauthenticated }
 
 /// Provider for managing authentication state across the application.
-/// Connects to an [AuthRepository] (local or Firebase) and exposes reactive
-/// state with error handling, loading states, and guest transitions.
+/// Connects to Firebase Authentication and exposes reactive state.
 class AuthProvider extends ChangeNotifier {
   final AuthRepository _authRepository;
   StreamSubscription<UserModel?>? _authSubscription;
@@ -35,13 +36,17 @@ class AuthProvider extends ChangeNotifier {
   String? get error => _error;
   bool get isLoading => _loading;
   bool get isAuthenticated => _state == AuthState.authenticated;
-  bool get isGuest => _state == AuthState.guest;
   bool get isCloudAuth => _authRepository.isCloudAuth;
 
-  bool get canAccessApp =>
-      _state == AuthState.authenticated || _state == AuthState.guest;
+  bool get canAccessApp => _state == AuthState.authenticated;
 
-  String get effectiveUserId => _user?.id ?? 'guest_user';
+  String get effectiveUserId {
+    final userId = _user?.id;
+    if (!isAuthenticated || userId == null) {
+      throw StateError('A signed-in Firebase user is required.');
+    }
+    return userId;
+  }
 
   Future<void> initialize() async {
     _loading = true;
@@ -131,15 +136,9 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  void continueAsGuest() {
-    _user = null;
-    _state = AuthState.guest;
-    _error = null;
-    notifyListeners();
-  }
-
   Future<void> signOut() async {
     _loading = true;
+    _error = null;
     notifyListeners();
     try {
       await _authRepository.signOut();

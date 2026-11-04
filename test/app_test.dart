@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
 import 'package:track_my_order/models/order_model.dart';
 import 'package:track_my_order/models/tracking_event_model.dart';
 import 'package:track_my_order/core/theme/app_theme.dart';
@@ -9,6 +10,7 @@ import 'package:track_my_order/services/tracking/tracking_result.dart';
 import 'package:track_my_order/services/notifications/notification_service.dart';
 import 'package:track_my_order/services/analytics/analytics_service.dart';
 import 'package:track_my_order/services/export/export_service.dart';
+import 'package:track_my_order/services/simulated_tracking_data.dart';
 
 void main() {
   // ── OrderModel serialization ─────────────────────────────────────────────
@@ -16,19 +18,19 @@ void main() {
     final now = DateTime(2026, 10, 1, 12, 0);
 
     OrderModel createOrder({String status = 'ordered'}) => OrderModel(
-          id: 'test-id',
-          userId: 'user-1',
-          platformName: 'Amazon',
-          platformOrderId: 'AMZ-001',
-          productName: 'Test Product',
-          quantity: 2,
-          price: 999.0,
-          currency: 'INR',
-          status: status,
-          orderedAt: now,
-          createdAt: now,
-          updatedAt: now,
-        );
+      id: 'test-id',
+      userId: 'user-1',
+      platformName: 'Amazon',
+      platformOrderId: 'AMZ-001',
+      productName: 'Test Product',
+      quantity: 2,
+      price: 999.0,
+      currency: 'INR',
+      status: status,
+      orderedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    );
 
     test('toJson and fromJson round-trip', () {
       final order = createOrder();
@@ -40,8 +42,40 @@ void main() {
       expect(restored.price, order.price);
       expect(restored.currency, order.currency);
       expect(restored.status, order.status);
-      expect(restored.orderedAt.millisecondsSinceEpoch,
-          order.orderedAt.millisecondsSinceEpoch);
+      expect(
+        restored.orderedAt.millisecondsSinceEpoch,
+        order.orderedAt.millisecondsSinceEpoch,
+      );
+    });
+
+    test('legacy orders default demo tracking on independently of isDemo', () {
+      final legacyJson = createOrder().toJson()
+        ..remove('demoTrackingEnabled')
+        ..remove('demo_tracking_enabled');
+
+      final restored = OrderModel.fromJson(legacyJson);
+
+      expect(restored.isDemo, isFalse);
+      expect(restored.demoTrackingEnabled, isTrue);
+    });
+
+    test('new courier fields survive serialization', () {
+      final order = createOrder().copyWith(
+        courierContact: '+91 9876543210',
+        pickupLocation: 'Mumbai',
+        deliveryLocation: 'Pune',
+        additionalNotes: 'Leave at reception',
+        demoTrackingEnabled: false,
+      );
+
+      final restored = OrderModel.fromJson(order.toJson());
+
+      expect(restored.courierContact, order.courierContact);
+      expect(restored.pickupLocation, order.pickupLocation);
+      expect(restored.deliveryLocation, order.deliveryLocation);
+      expect(restored.additionalNotes, order.additionalNotes);
+      expect(restored.demoTrackingEnabled, isFalse);
+      expect(restored.isDemo, isFalse);
     });
 
     test('JSON string round-trip', () {
@@ -52,6 +86,44 @@ void main() {
       expect(restored.platformName, order.platformName);
     });
 
+    test(
+      'simulated tracking is deterministic and does not change order status',
+      () {
+        final order = OrderModel(
+          id: 'real-order',
+          userId: 'user-1',
+          platformName: 'Amazon',
+          platformOrderId: 'AMZ-1',
+          productName: 'Sample parcel',
+          quantity: 1,
+          price: 250,
+          currency: 'INR',
+          status: 'ordered',
+          orderedAt: DateTime(2026, 11, 1, 10),
+          createdAt: DateTime(2026, 11, 1, 10),
+          updatedAt: DateTime(2026, 11, 1, 10),
+        );
+
+        final first = SimulatedTrackingData.eventsFor(order);
+        final second = SimulatedTrackingData.eventsFor(order);
+
+        expect(first, hasLength(7));
+        expect(first.map((event) => event.status), [
+          'ordered',
+          'confirmed',
+          'packed',
+          'shipped',
+          'in_transit',
+          'out_for_delivery',
+          'delivered',
+        ]);
+        expect(first.map((event) => event.id), second.map((event) => event.id));
+        expect(first.every((event) => event.source == 'simulation'), isTrue);
+        expect(first.every((event) => event.latitude == null), isTrue);
+        expect(order.status, 'ordered');
+      },
+    );
+
     test('copyWith preserves unmodified fields', () {
       final order = createOrder();
       final copy = order.copyWith(productName: 'Updated Name');
@@ -61,7 +133,9 @@ void main() {
     });
 
     test('copyWith clearProductImage sets null', () {
-      final order = createOrder().copyWith(productImageUrl: 'https://example.com/img.png');
+      final order = createOrder().copyWith(
+        productImageUrl: 'https://example.com/img.png',
+      );
       final copy = order.copyWith(clearProductImage: true);
       expect(copy.productImageUrl, isNull);
     });
@@ -78,6 +152,12 @@ void main() {
       expect(order.courierName, isNull);
       expect(order.trackingNumber, isNull);
       expect(order.expectedDeliveryAt, isNull);
+    });
+
+    test('documents without isDemo remain genuine orders', () {
+      final legacyJson = createOrder().toJson()..remove('isDemo');
+
+      expect(OrderModel.fromJson(legacyJson).isDemo, isFalse);
     });
   });
 
@@ -109,27 +189,37 @@ void main() {
 
   // ── Status labels and colours ────────────────────────────────────────────
   group('AppTheme status helpers', () {
+    test('uses the light beige and terracotta palette', () {
+      expect(AppTheme.lightTheme.brightness, Brightness.light);
+      expect(AppTheme.background, const Color(0xFFF8F3EC));
+      expect(AppTheme.card, const Color(0xFFFFFFFF));
+      expect(AppTheme.primaryBrown, const Color(0xFF49352D));
+      expect(AppTheme.secondaryText, const Color(0xFF8D7567));
+      expect(AppTheme.terracotta, const Color(0xFFC97955));
+      expect(AppTheme.border, const Color(0xFFE9DED4));
+      expect(AppTheme.success, const Color(0xFF438568));
+      expect(AppTheme.warning, const Color(0xFFD69A46));
+      expect(AppTheme.error, const Color(0xFFC65C52));
+    });
+
     test('all statuses have a label', () {
       for (final s in AppConstants.allStatuses) {
         final label = AppTheme.statusLabel(s);
-        expect(label.isNotEmpty, isTrue,
-            reason: 'Status "$s" has no label');
+        expect(label.isNotEmpty, isTrue, reason: 'Status "$s" has no label');
       }
     });
 
     test('all statuses have an icon', () {
       for (final s in AppConstants.allStatuses) {
         final icon = AppTheme.statusIcon(s);
-        expect(icon, isNotNull,
-            reason: 'Status "$s" has no icon');
+        expect(icon, isNotNull, reason: 'Status "$s" has no icon');
       }
     });
 
     test('all statuses have a colour', () {
       for (final s in AppConstants.allStatuses) {
         final color = AppTheme.statusColor(s);
-        expect(color, isNotNull,
-            reason: 'Status "$s" has no colour');
+        expect(color, isNotNull, reason: 'Status "$s" has no colour');
       }
     });
 
@@ -184,8 +274,7 @@ void main() {
         buildOrder('B', 'delivered', 'Flipkart'),
         buildOrder('C', 'ordered', 'Myntra'),
       ];
-      final filtered =
-          orders.where((o) => o.status == 'ordered').toList();
+      final filtered = orders.where((o) => o.status == 'ordered').toList();
       expect(filtered.length, 2);
     });
 
@@ -195,8 +284,7 @@ void main() {
         buildOrder('B', 'shipped', 'Amazon'),
         buildOrder('C', 'ordered', 'Flipkart'),
       ];
-      final filtered =
-          orders.where((o) => o.platformName == 'Amazon').toList();
+      final filtered = orders.where((o) => o.platformName == 'Amazon').toList();
       expect(filtered.length, 2);
     });
 
@@ -207,8 +295,7 @@ void main() {
         buildOrder('Puma Shoes', 'ordered', 'Flipkart'),
       ];
       final results = orders
-          .where((o) =>
-              matchesSearch(o, 'boat') && o.status == 'ordered')
+          .where((o) => matchesSearch(o, 'boat') && o.status == 'ordered')
           .toList();
       expect(results.length, 1);
       expect(results.first.productName, 'boAt Earbuds');
@@ -217,36 +304,44 @@ void main() {
 
   // ── Demo data ────────────────────────────────────────────────────────────
   group('DemoData', () {
+    const userId = 'authenticated-user';
+
     test('generates non-empty order list', () {
-      final demos = DemoData.generateDemoOrders();
+      final demos = DemoData.generateDemoOrders(userId);
       expect(demos.isNotEmpty, isTrue);
     });
 
     test('all demo orders are marked isDemo=true', () {
-      final demos = DemoData.generateDemoOrders();
+      final demos = DemoData.generateDemoOrders(userId);
       for (final o in demos) {
-        expect(o.isDemo, isTrue,
-            reason: 'Demo order "${o.productName}" has isDemo=false');
+        expect(
+          o.isDemo,
+          isTrue,
+          reason: 'Demo order "${o.productName}" has isDemo=false',
+        );
       }
     });
 
-    test('all demo orders belong to demo user', () {
-      final demos = DemoData.generateDemoOrders();
+    test('demo orders belong to the authenticated user', () {
+      final demos = DemoData.generateDemoOrders(userId);
       for (final o in demos) {
-        expect(o.userId, equals(DemoData.demoUserId));
+        expect(o.userId, equals(userId));
       }
     });
 
     test('demo orders have tracking events', () {
-      final demos = DemoData.generateDemoOrders();
+      final demos = DemoData.generateDemoOrders(userId);
       for (final o in demos) {
-        expect(o.trackingEvents.isNotEmpty, isTrue,
-            reason: 'Demo order "${o.productName}" has no tracking events');
+        expect(
+          o.trackingEvents.isNotEmpty,
+          isTrue,
+          reason: 'Demo order "${o.productName}" has no tracking events',
+        );
       }
     });
 
     test('all demo platforms are supported', () {
-      final demos = DemoData.generateDemoOrders();
+      final demos = DemoData.generateDemoOrders(userId);
       for (final o in demos) {
         expect(
           AppConstants.shoppingPlatforms.contains(o.platformName),
@@ -254,6 +349,16 @@ void main() {
           reason: 'Platform "${o.platformName}" not in supported list',
         );
       }
+    });
+
+    test('sample events are deterministic between generations', () {
+      final first = DemoData.generateDemoOrders(userId);
+      final second = DemoData.generateDemoOrders(userId);
+
+      expect(
+        first.map((order) => order.toJson()).toList(),
+        second.map((order) => order.toJson()).toList(),
+      );
     });
   });
 
@@ -302,9 +407,18 @@ void main() {
     });
 
     test('all statuses list covers known statuses', () {
-      expect(AppConstants.allStatuses.contains(AppConstants.statusOrdered), isTrue);
-      expect(AppConstants.allStatuses.contains(AppConstants.statusDelivered), isTrue);
-      expect(AppConstants.allStatuses.contains(AppConstants.statusCancelled), isTrue);
+      expect(
+        AppConstants.allStatuses.contains(AppConstants.statusOrdered),
+        isTrue,
+      );
+      expect(
+        AppConstants.allStatuses.contains(AppConstants.statusDelivered),
+        isTrue,
+      );
+      expect(
+        AppConstants.allStatuses.contains(AppConstants.statusCancelled),
+        isTrue,
+      );
     });
 
     test('tagline is defined', () {
@@ -362,7 +476,9 @@ void main() {
         sortOrder('early', t1, t2),
       ];
       list.sort((a, b) {
-        if (a.expectedDeliveryAt == null && b.expectedDeliveryAt == null) return 0;
+        if (a.expectedDeliveryAt == null && b.expectedDeliveryAt == null) {
+          return 0;
+        }
         if (a.expectedDeliveryAt == null) return 1;
         if (b.expectedDeliveryAt == null) return -1;
         return a.expectedDeliveryAt!.compareTo(b.expectedDeliveryAt!);
@@ -373,11 +489,6 @@ void main() {
 
   // ── Auth & User Isolation ────────────────────────────────────────────────
   group('User isolation & Auth State', () {
-    test('effective user ID defaults to guest_user in guest mode', () {
-      const guestId = 'guest_user';
-      expect(guestId, 'guest_user');
-    });
-
     test('orders are strictly separated by user ID', () {
       final now = DateTime.now();
       final user1Orders = [
@@ -414,8 +525,12 @@ void main() {
       ];
 
       final allOrders = [...user1Orders, ...user2Orders];
-      final aliceFiltered = allOrders.where((o) => o.userId == 'user_alice').toList();
-      final bobFiltered = allOrders.where((o) => o.userId == 'user_bob').toList();
+      final aliceFiltered = allOrders
+          .where((o) => o.userId == 'user_alice')
+          .toList();
+      final bobFiltered = allOrders
+          .where((o) => o.userId == 'user_bob')
+          .toList();
 
       expect(aliceFiltered.length, 1);
       expect(aliceFiltered.first.productName, 'Watch');
@@ -434,17 +549,20 @@ void main() {
       expect(AppConstants.supportedCouriers.contains('India Post'), isTrue);
     });
 
-    test('tracking result returns unconfigured message when credentials are empty', () {
-      final notConfigured = TrackingResult.notConfigured(
-        courierName: 'Delhivery',
-        trackingNumber: 'DEL12345678',
-        currentStatus: 'in_transit',
-      );
-      expect(notConfigured.isLive, isFalse);
-      expect(notConfigured.isConfigured, isFalse);
-      expect(notConfigured.hasError, isTrue);
-      expect(notConfigured.errorMessage, contains('Delhivery'));
-    });
+    test(
+      'tracking result returns unconfigured message when credentials are empty',
+      () {
+        final notConfigured = TrackingResult.notConfigured(
+          courierName: 'Delhivery',
+          trackingNumber: 'DEL12345678',
+          currentStatus: 'in_transit',
+        );
+        expect(notConfigured.isLive, isFalse);
+        expect(notConfigured.isConfigured, isFalse);
+        expect(notConfigured.hasError, isTrue);
+        expect(notConfigured.errorMessage, contains('Delhivery'));
+      },
+    );
 
     test('tracking result returns unsupported message for unknown courier', () {
       final unsupported = TrackingResult.unsupportedCarrier(
@@ -483,36 +601,39 @@ void main() {
       expect(order.reminderPreference, 'on_day');
     });
 
-    test('deserializes and serializes category and reminder fields correctly', () {
-      final order = OrderModel(
-        id: 'ord-p4',
-        userId: 'u1',
-        platformName: 'Amazon',
-        platformOrderId: 'AMZ-888',
-        productName: 'Smart Watch',
-        quantity: 2,
-        price: 2499.0,
-        currency: 'INR',
-        category: 'Electronics',
-        reminderEnabled: true,
-        reminderPreference: 'day_before',
-        status: 'shipped',
-        orderedAt: now,
-        expectedDeliveryAt: now.add(const Duration(days: 3)),
-        createdAt: now,
-        updatedAt: now,
-      );
+    test(
+      'deserializes and serializes category and reminder fields correctly',
+      () {
+        final order = OrderModel(
+          id: 'ord-p4',
+          userId: 'u1',
+          platformName: 'Amazon',
+          platformOrderId: 'AMZ-888',
+          productName: 'Smart Watch',
+          quantity: 2,
+          price: 2499.0,
+          currency: 'INR',
+          category: 'Electronics',
+          reminderEnabled: true,
+          reminderPreference: 'day_before',
+          status: 'shipped',
+          orderedAt: now,
+          expectedDeliveryAt: now.add(const Duration(days: 3)),
+          createdAt: now,
+          updatedAt: now,
+        );
 
-      final json = order.toJson();
-      expect(json['category'], 'Electronics');
-      expect(json['reminder_enabled'], isTrue);
-      expect(json['reminder_preference'], 'day_before');
+        final json = order.toJson();
+        expect(json['category'], 'Electronics');
+        expect(json['reminder_enabled'], isTrue);
+        expect(json['reminder_preference'], 'day_before');
 
-      final restored = OrderModel.fromJson(json);
-      expect(restored.category, 'Electronics');
-      expect(restored.reminderEnabled, isTrue);
-      expect(restored.reminderPreference, 'day_before');
-    });
+        final restored = OrderModel.fromJson(json);
+        expect(restored.category, 'Electronics');
+        expect(restored.reminderEnabled, isTrue);
+        expect(restored.reminderPreference, 'day_before');
+      },
+    );
   });
 
   // ── Phase 4: NotificationService Reminders ────────────────────────────────
@@ -568,46 +689,71 @@ void main() {
       expect(scheduled.minute, 0);
     });
 
-    test('calculateScheduledTime returns null when expectedDeliveryAt is null', () {
-      final order = OrderModel(
-        id: 'no-date',
-        userId: 'u1',
-        platformName: 'Meesho',
-        platformOrderId: 'MEE-1',
-        productName: 'Cotton Shirt',
-        quantity: 1,
-        price: 499.0,
-        currency: 'INR',
-        status: 'ordered',
-        reminderEnabled: true,
-        orderedAt: DateTime.now(),
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-      final scheduled = NotificationService.calculateScheduledTime(order);
-      expect(scheduled, isNull);
-    });
+    test(
+      'calculateScheduledTime returns null when expectedDeliveryAt is null',
+      () {
+        final order = OrderModel(
+          id: 'no-date',
+          userId: 'u1',
+          platformName: 'Meesho',
+          platformOrderId: 'MEE-1',
+          productName: 'Cotton Shirt',
+          quantity: 1,
+          price: 499.0,
+          currency: 'INR',
+          status: 'ordered',
+          reminderEnabled: true,
+          orderedAt: DateTime.now(),
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        final scheduled = NotificationService.calculateScheduledTime(order);
+        expect(scheduled, isNull);
+      },
+    );
 
     test('shouldScheduleReminder returns false if order is terminal (delivered or cancelled)', () {
       final deliveredOrder = buildOrderWithDelivery(status: 'delivered');
       final cancelledOrder = buildOrderWithDelivery(status: 'cancelled');
 
-      expect(NotificationService.shouldScheduleReminder(deliveredOrder), isFalse);
-      expect(NotificationService.shouldScheduleReminder(cancelledOrder), isFalse);
+      expect(
+        NotificationService.shouldScheduleReminder(deliveredOrder),
+        isFalse,
+      );
+      expect(
+        NotificationService.shouldScheduleReminder(cancelledOrder),
+        isFalse,
+      );
     });
 
-    test('shouldScheduleReminder returns false if reminderEnabled is false', () {
-      final disabledOrder = buildOrderWithDelivery(reminderEnabled: false);
-      expect(NotificationService.shouldScheduleReminder(disabledOrder), isFalse);
-    });
+    test(
+      'shouldScheduleReminder returns false if reminderEnabled is false',
+      () {
+        final disabledOrder = buildOrderWithDelivery(reminderEnabled: false);
+        expect(
+          NotificationService.shouldScheduleReminder(disabledOrder),
+          isFalse,
+        );
+      },
+    );
 
     test('getPendingReminders filters only eligible orders', () {
       final futureDate = DateTime.now().add(const Duration(days: 5));
       final eligible = buildOrderWithDelivery(expectedDelivery: futureDate);
-      final delivered = buildOrderWithDelivery(status: 'delivered', expectedDelivery: futureDate);
-      final disabled = buildOrderWithDelivery(reminderEnabled: false, expectedDelivery: futureDate);
+      final delivered = buildOrderWithDelivery(
+        status: 'delivered',
+        expectedDelivery: futureDate,
+      );
+      final disabled = buildOrderWithDelivery(
+        reminderEnabled: false,
+        expectedDelivery: futureDate,
+      );
 
-      final reminders = NotificationService.getPendingReminders([eligible, delivered, disabled]);
+      final reminders = NotificationService.getPendingReminders([
+        eligible,
+        delivered,
+        disabled,
+      ]);
       expect(reminders.length, 1);
       expect(reminders.first.order.id, eligible.id);
     });
@@ -680,19 +826,22 @@ void main() {
       ),
     ];
 
-    test('calculateSpending accurately computes sum excluding cancelled orders', () {
-      final spending = AnalyticsService.calculateSpending(orders);
+    test(
+      'calculateSpending accurately computes sum excluding cancelled orders',
+      () {
+        final spending = AnalyticsService.calculateSpending(orders);
 
-      // Expected spending:
-      // ord-1: 2000 * 1 = 2000
-      // ord-2: 500 * 2 = 1000
-      // ord-3: 1500 * 1 = 1500
-      // Total = 4500. ord-4 (3000) is excluded.
-      expect(spending.totalSpent, 4500.0);
-      expect(spending.includedOrderCount, 3);
-      expect(spending.cancelledOrderCount, 1);
-      expect(spending.averageOrderValue, 1500.0); // 4500 / 3 = 1500
-    });
+        // Expected spending:
+        // ord-1: 2000 * 1 = 2000
+        // ord-2: 500 * 2 = 1000
+        // ord-3: 1500 * 1 = 1500
+        // Total = 4500. ord-4 (3000) is excluded.
+        expect(spending.totalSpent, 4500.0);
+        expect(spending.includedOrderCount, 3);
+        expect(spending.cancelledOrderCount, 1);
+        expect(spending.averageOrderValue, 1500.0); // 4500 / 3 = 1500
+      },
+    );
 
     test('calculatePlatformBreakdown handles percentages and spending per platform', () {
       final breakdown = AnalyticsService.calculatePlatformBreakdown(orders);
@@ -711,11 +860,15 @@ void main() {
     test('calculateCategoryBreakdown aggregates spending per category', () {
       final categories = AnalyticsService.calculateCategoryBreakdown(orders);
 
-      final electronics = categories.firstWhere((c) => c.category == 'Electronics');
+      final electronics = categories.firstWhere(
+        (c) => c.category == 'Electronics',
+      );
       expect(electronics.orderCount, 2);
       expect(electronics.totalSpent, 3000.0);
 
-      final fashion = categories.firstWhere((c) => c.category == 'Fashion & Apparel');
+      final fashion = categories.firstWhere(
+        (c) => c.category == 'Fashion & Apparel',
+      );
       expect(fashion.orderCount, 1);
       expect(fashion.totalSpent, 1500.0);
 
@@ -784,7 +937,18 @@ void main() {
 
       // Check headers
       expect(csv, contains('Order ID,Platform,Platform Order ID,Product Name'));
-      expect(csv, contains('Price,Currency,Total Amount,Status,Courier Name,Tracking Number'));
+      expect(
+        csv,
+        contains(
+          'Price,Currency,Total Amount,Status,Courier Name,Tracking Number',
+        ),
+      );
+      expect(
+        csv,
+        contains(
+          'Courier Contact,Pickup Location,Delivery Location,Additional Notes',
+        ),
+      );
 
       // Check commas and quotes escaping
       // "Noise-Cancelling Headphones, Wireless" has a comma so must be quoted:
@@ -793,26 +957,38 @@ void main() {
       expect(csv, contains('""Classic""'));
     });
 
-    test('generateJson produces valid JSON schema with version and orderCount', () {
-      final jsonStr = ExportService.generateJson(testOrders);
+    test(
+      'generateJson produces valid JSON schema with version and orderCount',
+      () {
+        final jsonStr = ExportService.generateJson(testOrders);
 
-      expect(jsonStr, contains('"version": 1'));
-      expect(jsonStr, contains('"orderCount": 2'));
-      expect(jsonStr, contains('"orders":'));
+        expect(jsonStr, contains('"version": 1'));
+        expect(jsonStr, contains('"orderCount": 2'));
+        expect(jsonStr, contains('"orders":'));
 
-      // Test parsing back
-      final imported = ExportService.parseImportJson(jsonStr);
-      expect(imported.length, 2);
-      expect(imported[0].id, 'exp-1');
-      expect(imported[0].productName, 'Noise-Cancelling Headphones, Wireless');
-      expect(imported[0].price, 1999.50);
-      expect(imported[1].id, 'exp-2');
-      expect(imported[1].category, 'Fashion & Apparel');
-    });
+        // Test parsing back
+        final imported = ExportService.parseImportJson(jsonStr);
+        expect(imported.length, 2);
+        expect(imported[0].id, 'exp-1');
+        expect(
+          imported[0].productName,
+          'Noise-Cancelling Headphones, Wireless',
+        );
+        expect(imported[0].price, 1999.50);
+        expect(imported[1].id, 'exp-2');
+        expect(imported[1].category, 'Fashion & Apparel');
+      },
+    );
 
     test('parseImportJson throws on corrupted or non-order JSON', () {
-      expect(() => ExportService.parseImportJson('{ "version": 1 }'), throwsFormatException);
-      expect(() => ExportService.parseImportJson('not json'), throwsFormatException);
+      expect(
+        () => ExportService.parseImportJson('{ "version": 1 }'),
+        throwsFormatException,
+      );
+      expect(
+        () => ExportService.parseImportJson('not json'),
+        throwsFormatException,
+      );
     });
   });
 }

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/orders_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -33,12 +33,10 @@ class _LoginScreenState extends State<LoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(auth.error ?? 'Sign-in failed.'),
-          backgroundColor: const Color(0xFFF87171),
+          backgroundColor: AppTheme.error,
         ),
       );
     } else if (ok && mounted) {
-      context.read<OrdersProvider>().clearState();
-      context.read<OrdersProvider>().loadOrders(auth.effectiveUserId);
       context.go('/home');
     }
   }
@@ -64,10 +62,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           width: 72,
                           height: 72,
                           decoration: BoxDecoration(
-                            color: AppTheme.electricLime.withValues(alpha: 0.12),
+                            color: AppTheme.electricLime.withValues(
+                              alpha: 0.12,
+                            ),
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: AppTheme.electricLime.withValues(alpha: 0.3),
+                              color: AppTheme.electricLime.withValues(
+                                alpha: 0.3,
+                              ),
                               width: 1.5,
                             ),
                           ),
@@ -80,9 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 16),
                         Text(
                           'Track My Order',
-                          style: Theme.of(context)
-                              .textTheme
-                              .displaySmall
+                          style: Theme.of(context).textTheme.displaySmall
                               ?.copyWith(color: AppTheme.cloudWhite),
                         ),
                         const SizedBox(height: 6),
@@ -95,43 +95,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 40),
 
-                  // Dev-mode notice
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppTheme.electricLime.withValues(alpha: 0.07),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                          color: AppTheme.electricLime.withValues(alpha: 0.2)),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.info_outline,
-                            size: 16,
-                            color: AppTheme.electricLime),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Demo mode — credentials are stored locally on this device only.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppTheme.electricLime
-                                  .withValues(alpha: 0.85),
-                              height: 1.4,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 12),
 
-                  Text('Sign In',
-                      style: Theme.of(context).textTheme.headlineMedium),
+                  Text(
+                    'Sign In',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
                   const SizedBox(height: 4),
-                  Text('Welcome back! Enter your details.',
-                      style: Theme.of(context).textTheme.bodyMedium),
+                  Text(
+                    'Welcome back! Enter your details.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
                   const SizedBox(height: 24),
 
                   Form(
@@ -146,7 +120,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             prefixIcon: Icon(Icons.email_outlined),
                           ),
                           validator: (v) {
-                            if (v == null || v.isEmpty) return 'Email is required';
+                            if (v == null || v.isEmpty) {
+                              return 'Email is required';
+                            }
                             if (!v.contains('@')) return 'Enter a valid email';
                             return null;
                           },
@@ -159,15 +135,19 @@ class _LoginScreenState extends State<LoginScreen> {
                             labelText: 'Password',
                             prefixIcon: const Icon(Icons.lock_outline),
                             suffixIcon: IconButton(
-                              icon: Icon(_obscure
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined),
+                              icon: Icon(
+                                _obscure
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                              ),
                               onPressed: () =>
                                   setState(() => _obscure = !_obscure),
                             ),
                           ),
                           validator: (v) {
-                            if (v == null || v.isEmpty) return 'Password is required';
+                            if (v == null || v.isEmpty) {
+                              return 'Password is required';
+                            }
                             if (v.length < 6) return 'At least 6 characters';
                             return null;
                           },
@@ -182,8 +162,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                     height: 20,
                                     width: 20,
                                     child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: AppTheme.midnightNavy),
+                                      strokeWidth: 2,
+                                      color: AppTheme.midnightNavy,
+                                    ),
                                   )
                                 : const Text('Sign In'),
                           ),
@@ -195,27 +176,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text("Don't have an account?",
-                          style: Theme.of(context).textTheme.bodyMedium),
+                      Text(
+                        "Don't have an account?",
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
                       TextButton(
                         onPressed: () => context.go('/register'),
                         child: const Text('Register'),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 8),
-                  Center(
-                    child: TextButton.icon(
-                      onPressed: () {
-                        context.read<AuthProvider>().continueAsGuest();
-                        context.go('/home');
-                      },
-                      icon: const Icon(Icons.arrow_forward, size: 16),
-                      label: const Text('Continue as Guest (Offline Mode)'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppTheme.textSecondary,
-                      ),
-                    ),
                   ),
                 ],
               ),

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import '../models/order_model.dart';
 import '../repositories/order_repository.dart';
 import '../services/demo_data.dart';
@@ -11,10 +12,10 @@ class OrdersProvider extends ChangeNotifier {
   OrdersProvider(this._repo);
 
   List<OrderModel> _orders = [];
-  List<OrderModel> _demoOrders = [];
   OrdersLoadState _loadState = OrdersLoadState.idle;
   String? _error;
   bool _showDemoOrders = false;
+  int _loadGeneration = 0;
 
   // Filter state
   String _searchQuery = '';
@@ -33,46 +34,55 @@ class OrdersProvider extends ChangeNotifier {
   String get platformFilter => _platformFilter;
   String get sortBy => _sortBy;
 
-  List<OrderModel> get allUserOrders => List.unmodifiable(_orders);
+  List<OrderModel> get allUserOrders =>
+      List.unmodifiable(_orders.where((order) => !order.isDemo));
+  List<OrderModel> get demoOrders =>
+      List.unmodifiable(_orders.where((order) => order.isDemo));
+  bool get hasDemoOrders => _orders.any((order) => order.isDemo);
 
   List<OrderModel> get filteredOrders {
-    final base = _showDemoOrders ? [..._orders, ..._demoOrders] : _orders;
+    final base = _orders
+        .where((order) => _showDemoOrders || !order.isDemo)
+        .toList();
     var result = base.where(_matchesFilters).toList();
     _applySort(result);
     return result;
   }
 
-  // Summary counts (user orders only)
-  int get activeCount => _orders
-      .where((o) =>
-          !['delivered', 'cancelled', 'returned'].contains(o.status))
+  Iterable<OrderModel> get _realOrders =>
+      _orders.where((order) => !order.isDemo);
+
+  int get activeCount => _realOrders
+      .where((o) => !['delivered', 'cancelled', 'returned'].contains(o.status))
       .length;
   int get deliveredCount =>
-      _orders.where((o) => o.status == 'delivered').length;
-  int get delayedCount => _orders.where((o) => o.status == 'delayed').length;
-  int get totalCount => _orders.length;
+      _realOrders.where((o) => o.status == 'delivered').length;
+  int get delayedCount =>
+      _realOrders.where((o) => o.status == 'delayed').length;
+  int get totalCount => _realOrders.length;
 
   List<OrderModel> get recentOrders {
-    final list = [..._orders]
+    final list = [..._realOrders]
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return list.take(5).toList();
   }
 
   List<OrderModel> get upcomingDeliveries {
     final now = DateTime.now();
-    return _orders
-        .where((o) =>
-            o.expectedDeliveryAt != null &&
-            o.expectedDeliveryAt!.isAfter(now) &&
-            !['delivered', 'cancelled', 'returned'].contains(o.status))
+    return _realOrders
+        .where(
+          (o) =>
+              o.expectedDeliveryAt != null &&
+              o.expectedDeliveryAt!.isAfter(now) &&
+              !['delivered', 'cancelled', 'returned'].contains(o.status),
+        )
         .toList()
-      ..sort((a, b) =>
-          a.expectedDeliveryAt!.compareTo(b.expectedDeliveryAt!));
+      ..sort((a, b) => a.expectedDeliveryAt!.compareTo(b.expectedDeliveryAt!));
   }
 
   Map<String, int> get platformCounts {
     final map = <String, int>{};
-    for (final o in _orders) {
+    for (final o in _realOrders) {
       map[o.platformName] = (map[o.platformName] ?? 0) + 1;
     }
     return map;
@@ -80,14 +90,17 @@ class OrdersProvider extends ChangeNotifier {
 
   // ── Load ─────────────────────────────────────────────────────────────────
   Future<void> loadOrders(String userId) async {
+    final generation = ++_loadGeneration;
     _loadState = OrdersLoadState.loading;
     _error = null;
     notifyListeners();
     try {
-      _orders = await _repo.getOrders(userId);
-      _demoOrders = DemoData.generateDemoOrders();
+      final loadedOrders = await _repo.getOrders(userId);
+      if (generation != _loadGeneration) return;
+      _orders = loadedOrders;
       _loadState = OrdersLoadState.loaded;
     } catch (e) {
+      if (generation != _loadGeneration) return;
       _error = e.toString().replaceFirst('Exception: ', '');
       _loadState = OrdersLoadState.error;
     }
@@ -96,10 +109,11 @@ class OrdersProvider extends ChangeNotifier {
 
   /// Cleanly clears in-memory state on sign out so private orders are not retained
   void clearState() {
+    _loadGeneration++;
     _orders = [];
-    _demoOrders = [];
     _loadState = OrdersLoadState.idle;
     _error = null;
+    _showDemoOrders = false;
     _searchQuery = '';
     _statusFilter = 'all';
     _platformFilter = 'all';
@@ -127,10 +141,46 @@ class OrdersProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> addDemoOrders(String userId) async {
+    if (userId.trim().isEmpty) {
+      throw StateError('A signed-in user is required to add demo orders.');
+    }
+
+    final existingIds = _orders
+        .where((order) => order.isDemo)
+        .map((order) => order.id)
+        .toSet();
+    try {
+      for (final demo in DemoData.generateDemoOrders(userId)) {
+        if (existingIds.contains(demo.id)) continue;
+        final saved = await _repo.saveOrder(demo);
+        _orders.insert(0, saved);
+        existingIds.add(saved.id);
+      }
+    } finally {
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteDemoOrders() async {
+    final demoIds = _orders
+        .where((order) => order.isDemo)
+        .map((order) => order.id)
+        .toList();
+    try {
+      for (final id in demoIds) {
+        await _repo.deleteOrder(id);
+        _orders.removeWhere((order) => order.id == id);
+      }
+      _showDemoOrders = false;
+    } finally {
+      notifyListeners();
+    }
+  }
+
   OrderModel? getOrderById(String id) {
     try {
-      final all = [..._orders, ..._demoOrders];
-      return all.firstWhere((o) => o.id == id);
+      return _orders.firstWhere((o) => o.id == id);
     } catch (_) {
       return null;
     }
@@ -175,7 +225,8 @@ class OrdersProvider extends ChangeNotifier {
     // Search
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
-      final matches = o.productName.toLowerCase().contains(q) ||
+      final matches =
+          o.productName.toLowerCase().contains(q) ||
           o.platformOrderId.toLowerCase().contains(q) ||
           (o.trackingNumber?.toLowerCase().contains(q) ?? false) ||
           o.platformName.toLowerCase().contains(q);
@@ -194,7 +245,9 @@ class OrdersProvider extends ChangeNotifier {
   void _applySort(List<OrderModel> list) {
     if (_sortBy == 'delivery') {
       list.sort((a, b) {
-        if (a.expectedDeliveryAt == null && b.expectedDeliveryAt == null) return 0;
+        if (a.expectedDeliveryAt == null && b.expectedDeliveryAt == null) {
+          return 0;
+        }
         if (a.expectedDeliveryAt == null) return 1;
         if (b.expectedDeliveryAt == null) return -1;
         return a.expectedDeliveryAt!.compareTo(b.expectedDeliveryAt!);

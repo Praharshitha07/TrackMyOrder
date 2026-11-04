@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/order_card.dart';
 import '../../core/widgets/skeletons.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/orders_provider.dart';
 import '../../core/constants/app_constants.dart';
 
@@ -55,20 +57,26 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   PopupMenuItem(
                     value: 'recent',
                     child: _menuItem(
-                        Icons.access_time_outlined, 'Newest first',
-                        orders.sortBy == 'recent'),
+                      Icons.access_time_outlined,
+                      'Newest first',
+                      orders.sortBy == 'recent',
+                    ),
                   ),
                   PopupMenuItem(
                     value: 'oldest',
                     child: _menuItem(
-                        Icons.history_outlined, 'Oldest first',
-                        orders.sortBy == 'oldest'),
+                      Icons.history_outlined,
+                      'Oldest first',
+                      orders.sortBy == 'oldest',
+                    ),
                   ),
                   PopupMenuItem(
                     value: 'delivery',
                     child: _menuItem(
-                        Icons.calendar_today_outlined, 'Delivery date',
-                        orders.sortBy == 'delivery'),
+                      Icons.calendar_today_outlined,
+                      'Delivery date',
+                      orders.sortBy == 'delivery',
+                    ),
                   ),
                 ],
               ),
@@ -98,7 +106,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         hintText: 'Search product, order ID, tracking…',
                         prefixIcon: Icon(Icons.search, size: 20),
                         contentPadding: EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 10),
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -162,11 +172,24 @@ class _OrdersScreenState extends State<OrdersScreen> {
           if (orders.isLoading)
             SliverPadding(
               padding: EdgeInsets.symmetric(
-                  horizontal: isWide ? 24 : 16, vertical: 8),
+                horizontal: isWide ? 24 : 16,
+                vertical: 8,
+              ),
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) => const OrderCardSkeleton(),
                   childCount: 5,
+                ),
+              ),
+            )
+          else if (orders.loadState == OrdersLoadState.error)
+            SliverFillRemaining(
+              child: ErrorState(
+                message:
+                    orders.error ??
+                    'Could not load your orders from Firestore.',
+                onRetry: () => context.read<OrdersProvider>().loadOrders(
+                  context.read<AuthProvider>().effectiveUserId,
                 ),
               ),
             )
@@ -185,18 +208,19 @@ class _OrdersScreenState extends State<OrdersScreen> {
           else
             SliverPadding(
               padding: EdgeInsets.fromLTRB(
-                  isWide ? 24 : 16, 8, isWide ? 24 : 16, 80),
+                isWide ? 24 : 16,
+                8,
+                isWide ? 24 : 16,
+                80,
+              ),
               sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (_, i) {
-                    final o = orders.filteredOrders[i];
-                    return OrderCard(
-                      order: o,
-                      onTap: () => context.push('/order/${o.id}'),
-                    );
-                  },
-                  childCount: orders.filteredOrders.length,
-                ),
+                delegate: SliverChildBuilderDelegate((_, i) {
+                  final o = orders.filteredOrders[i];
+                  return OrderCard(
+                    order: o,
+                    onTap: () => context.push('/order/${o.id}'),
+                  );
+                }, childCount: orders.filteredOrders.length),
               ),
             ),
         ],
@@ -248,16 +272,17 @@ class _OrdersScreenState extends State<OrdersScreen> {
   Widget _menuItem(IconData icon, String label, bool selected) {
     return Row(
       children: [
-        Icon(icon,
-            size: 18,
-            color: selected ? AppTheme.electricLime : AppTheme.textSecondary),
+        Icon(
+          icon,
+          size: 18,
+          color: selected ? AppTheme.electricLime : AppTheme.textSecondary,
+        ),
         const SizedBox(width: 10),
         Text(
           label,
           style: TextStyle(
             color: selected ? AppTheme.electricLime : AppTheme.cloudWhite,
-            fontWeight:
-                selected ? FontWeight.w600 : FontWeight.w400,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
           ),
         ),
       ],

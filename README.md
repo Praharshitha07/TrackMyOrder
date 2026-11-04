@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 📦 Track My Order
 
 One Place for All Your Online Orders
@@ -391,3 +392,41 @@ Until a license is added, do not assume that the repository is licensed for unre
 ⭐ Track My Order
 
 All your online orders. One organized place.
+=======
+# Track My Order
+
+Track My Order is a Flutter order manager with Firebase email/password
+authentication, per-user Cloud Firestore order storage, and a responsive
+Soft Beige + Terracotta interface.
+
+## Run locally
+
+1. Install the Flutter SDK version specified by `pubspec.yaml`.
+2. Configure Firebase for the platforms you intend to run. The app initializes
+   Firebase using `lib/firebase_options.dart`; replace/regenerate these options
+   for your own Firebase project when required.
+3. Enable Email/Password sign-in in Firebase Authentication and deploy
+   `firestore.rules` to the project.
+4. Run `flutter pub get`, then `flutter run`.
+
+All order screens require a signed-in Firebase user. Orders and explicitly
+created demo records are saved below `/users/{uid}/orders`; demo records have
+`isDemo: true` and can be removed separately from genuine orders.
+
+Each order has a separately stored `demoTrackingEnabled` preference, defaulting
+to on for new and older orders. When enabled, the app displays a deterministic
+seven-stage sample timeline and Mumbai-to-Pune map route, clearly labeled as
+simulated and independent of the order's genuine status and tracking events.
+Turn it off to show only genuine tracking events and coordinates supplied by a
+tracking source. Courier details can be edited later and are optional. Live
+courier updates require a configured, authorized carrier integration;
+OpenStreetMap tiles do not require an API key.
+
+## Validate
+
+```shell
+flutter analyze
+flutter test
+flutter build web
+```
+>>>>>>> cda3118 (Redesign UI and enhance order tracking experience)

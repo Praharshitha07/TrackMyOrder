@@ -1,11 +1,11 @@
 {
-    "name": "track_my_order",
-    "short_name": "track_my_order",
+    "name": "Track My Order",
+    "short_name": "Track My Order",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F8F3EC",
+    "theme_color": "#C97955",
+    "description": "Manage and track your orders in one place.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

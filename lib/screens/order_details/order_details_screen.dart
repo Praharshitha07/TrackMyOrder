@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/status_badge.dart';
 import '../../core/utils/format_utils.dart';
@@ -10,6 +11,7 @@ import '../../models/order_model.dart';
 import '../../providers/orders_provider.dart';
 import '../../services/tracking/unified_tracking_manager.dart';
 import '../../services/notifications/notification_service.dart';
+import '../../services/simulated_tracking_data.dart';
 import 'widgets/tracking_timeline.dart';
 
 class OrderDetailsScreen extends StatefulWidget {
@@ -23,6 +25,7 @@ class OrderDetailsScreen extends StatefulWidget {
 class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   final UnifiedTrackingManager _trackingManager = UnifiedTrackingManager();
   bool _isRefreshing = false;
+  bool _isSavingDemoTracking = false;
   late OrderModel _currentOrder;
 
   @override
@@ -31,7 +34,57 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     _currentOrder = widget.order;
   }
 
+  Future<void> _editDetails() async {
+    await context.push('/add-order', extra: {'order': _currentOrder});
+    if (!mounted) return;
+    final updated = context.read<OrdersProvider>().getOrderById(
+      _currentOrder.id,
+    );
+    if (updated != null) {
+      setState(() => _currentOrder = updated);
+    }
+  }
+
+  Future<void> _setDemoTracking(bool enabled) async {
+    setState(() => _isSavingDemoTracking = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final updated = _currentOrder.copyWith(
+        demoTrackingEnabled: enabled,
+        updatedAt: DateTime.now(),
+      );
+      await context.read<OrdersProvider>().updateOrder(updated);
+      if (mounted) {
+        setState(() => _currentOrder = updated);
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              enabled
+                  ? 'Demo tracking enabled for this order.'
+                  : 'Demo tracking disabled for this order.',
+            ),
+          ),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'Could not update Demo Tracking: '
+              '${error.toString().replaceFirst('Exception: ', '')}',
+            ),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSavingDemoTracking = false);
+    }
+  }
+
   Future<void> _refreshTracking() async {
+    if (_currentOrder.isDemo) return;
     setState(() => _isRefreshing = true);
     try {
       final result = await _trackingManager.refreshTracking(
@@ -49,13 +102,19 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               title: Row(
                 children: [
                   Icon(
-                    result.isConfigured ? Icons.error_outline : Icons.info_outline,
+                    result.isConfigured
+                        ? Icons.error_outline
+                        : Icons.info_outline,
                     color: result.isConfigured
-                        ? const Color(0xFFF87171)
+                        ? AppTheme.error
                         : AppTheme.electricLime,
                   ),
                   const SizedBox(width: 8),
-                  Text(result.isConfigured ? 'Tracking Error' : 'Carrier Integration Status'),
+                  Text(
+                    result.isConfigured
+                        ? 'Tracking Error'
+                        : 'Carrier Integration Status',
+                  ),
                 ],
               ),
               content: Text(
@@ -84,18 +143,23 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
           final scaffoldMessenger = ScaffoldMessenger.of(context);
           final updated = _currentOrder.copyWith(
             status: result.normalizedStatus,
-            expectedDeliveryAt: result.estimatedDeliveryAt ?? _currentOrder.expectedDeliveryAt,
+            expectedDeliveryAt:
+                result.estimatedDeliveryAt ?? _currentOrder.expectedDeliveryAt,
             lastSyncedAt: result.lastCheckedAt,
             trackingEvents: [
               ...result.events,
-              ..._currentOrder.trackingEvents.where((e) => !result.events.any((re) => re.id == e.id)),
+              ..._currentOrder.trackingEvents.where(
+                (e) => !result.events.any((re) => re.id == e.id),
+              ),
             ],
           );
           await ordersProvider.updateOrder(updated);
           if (mounted) {
             setState(() => _currentOrder = updated);
             scaffoldMessenger.showSnackBar(
-              const SnackBar(content: Text('Shipment tracking details refreshed.')),
+              const SnackBar(
+                content: Text('Shipment tracking details refreshed.'),
+              ),
             );
           }
         }
@@ -124,15 +188,16 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Order'),
         content: Text(
-            'Delete "${_currentOrder.productName}"? This cannot be undone.'),
+          'Delete "${_currentOrder.productName}"? This cannot be undone.',
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFFF87171)),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.error),
             child: const Text('Delete'),
           ),
         ],
@@ -155,26 +220,21 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       appBar: AppBar(
         title: const Text('Order Details'),
         actions: [
-          IconButton(
-            icon: _isRefreshing
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppTheme.electricLime),
-                  )
-                : const Icon(Icons.refresh),
-            tooltip: 'Refresh Tracking',
-            onPressed: _isRefreshing ? null : _refreshTracking,
-          ),
-          IconButton(
-            icon: const Icon(Icons.edit_outlined),
-            tooltip: 'Edit',
-            onPressed: () => context.push(
-              '/add-order',
-              extra: {'order': _currentOrder},
+          if (!_currentOrder.isDemo)
+            IconButton(
+              icon: _isRefreshing
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppTheme.electricLime,
+                      ),
+                    )
+                  : const Icon(Icons.refresh),
+              tooltip: 'Refresh Tracking',
+              onPressed: _isRefreshing ? null : _refreshTracking,
             ),
-          ),
           if (!_currentOrder.isDemo)
             IconButton(
               icon: const Icon(Icons.delete_outline),
@@ -186,7 +246,9 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.symmetric(
-            horizontal: isWide ? 48 : 16, vertical: 16),
+          horizontal: isWide ? 48 : 16,
+          vertical: 16,
+        ),
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 720),
@@ -194,6 +256,8 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // ── Product card ──────────────────────────────────────
+                Text('Order Summary', style: theme.textTheme.headlineSmall),
+                const SizedBox(height: 10),
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -206,9 +270,10 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                     children: [
                       // Image
                       _ProductImage(
-                          imageUrl: _currentOrder.productImageUrl,
-                          platformIcon: platformIcon,
-                          platformColor: platformColor),
+                        imageUrl: _currentOrder.productImageUrl,
+                        platformIcon: platformIcon,
+                        platformColor: platformColor,
+                      ),
                       const SizedBox(width: 14),
                       Expanded(
                         child: Column(
@@ -216,31 +281,40 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                           children: [
                             Row(
                               children: [
-                                Icon(platformIcon,
-                                    size: 14, color: platformColor),
+                                Icon(
+                                  platformIcon,
+                                  size: 14,
+                                  color: platformColor,
+                                ),
                                 const SizedBox(width: 5),
-                                Text(_currentOrder.platformName,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: platformColor,
-                                    )),
+                                Text(
+                                  _currentOrder.platformName,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: platformColor,
+                                  ),
+                                ),
                                 if (_currentOrder.isDemo) ...[
                                   const SizedBox(width: 8),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 2),
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: AppTheme.electricLime
-                                          .withValues(alpha: 0.1),
+                                      color: AppTheme.electricLime.withValues(
+                                        alpha: 0.1,
+                                      ),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: Text(
                                       'Demo',
                                       style: TextStyle(
                                         fontSize: 10,
-                                        color: AppTheme.electricLime
-                                            .withValues(alpha: 0.7),
+                                        color: AppTheme.electricLime.withValues(
+                                          alpha: 0.7,
+                                        ),
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -249,8 +323,10 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                               ],
                             ),
                             const SizedBox(height: 6),
-                            Text(_currentOrder.productName,
-                                style: theme.textTheme.headlineSmall),
+                            Text(
+                              _currentOrder.productName,
+                              style: theme.textTheme.headlineSmall,
+                            ),
                             const SizedBox(height: 8),
                             Wrap(
                               spacing: 8,
@@ -261,26 +337,32 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                                 if (_currentOrder.category != null)
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 3),
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: AppTheme.surfaceLight,
                                       borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
-                                          color: AppTheme.cardBorder),
+                                        color: AppTheme.cardBorder,
+                                      ),
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        const Icon(Icons.category_outlined,
-                                            size: 12,
-                                            color: AppTheme.electricLime),
+                                        const Icon(
+                                          Icons.category_outlined,
+                                          size: 12,
+                                          color: AppTheme.electricLime,
+                                        ),
                                         const SizedBox(width: 4),
                                         Text(
                                           _currentOrder.category!,
                                           style: const TextStyle(
-                                              fontSize: 11,
-                                              color: AppTheme.cloudWhite,
-                                              fontWeight: FontWeight.w500),
+                                            fontSize: 11,
+                                            color: AppTheme.cloudWhite,
+                                            fontWeight: FontWeight.w500,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -299,30 +381,51 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 _InfoGrid(order: _currentOrder),
                 const SizedBox(height: 16),
 
-                // ── Delivery Reminder Card ────────────────────────────
-                _DeliveryReminderCard(
-                  order: _currentOrder,
-                  onToggleReminder: (enabled) async {
-                    final ordersProvider = context.read<OrdersProvider>();
-                    final messenger = ScaffoldMessenger.of(context);
-                    final updated = _currentOrder.copyWith(
-                      reminderEnabled: enabled,
-                    );
-                    await ordersProvider.updateOrder(updated);
-                    if (mounted) {
-                      setState(() => _currentOrder = updated);
-                      messenger.showSnackBar(
-                        SnackBar(
-                          content: Text(enabled
-                              ? 'Delivery reminder scheduled.'
-                              : 'Delivery reminder disabled.'),
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
-                    }
-                  },
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _editDetails,
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Edit Details'),
+                  ),
                 ),
                 const SizedBox(height: 16),
+
+                _DemoTrackingCard(
+                  enabled: _currentOrder.demoTrackingEnabled,
+                  isSaving: _isSavingDemoTracking,
+                  onChanged: _setDemoTracking,
+                ),
+                const SizedBox(height: 16),
+
+                // ── Delivery Reminder Card ────────────────────────────
+                if (!_currentOrder.isDemo) ...[
+                  _DeliveryReminderCard(
+                    order: _currentOrder,
+                    onToggleReminder: (enabled) async {
+                      final ordersProvider = context.read<OrdersProvider>();
+                      final messenger = ScaffoldMessenger.of(context);
+                      final updated = _currentOrder.copyWith(
+                        reminderEnabled: enabled,
+                      );
+                      await ordersProvider.updateOrder(updated);
+                      if (mounted) {
+                        setState(() => _currentOrder = updated);
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              enabled
+                                  ? 'Delivery reminder scheduled.'
+                                  : 'Delivery reminder disabled.',
+                            ),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
 
                 // ── Action buttons ────────────────────────────────────
                 _ActionButtons(
@@ -337,19 +440,82 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Tracking Timeline',
-                        style: theme.textTheme.headlineSmall),
+                    Text(
+                      'Shipment Timeline',
+                      style: theme.textTheme.headlineSmall,
+                    ),
                     if (_currentOrder.lastSyncedAt != null)
                       Text(
                         'Synced: ${AppDateUtils.formatTime(_currentOrder.lastSyncedAt)}',
-                        style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppTheme.textMuted,
+                        ),
                       ),
                   ],
                 ),
+                if (_currentOrder.demoTrackingEnabled) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.terracotta.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppTheme.terracotta.withValues(alpha: 0.25),
+                      ),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(
+                          Icons.science_outlined,
+                          size: 18,
+                          color: AppTheme.terracotta,
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'SIMULATED TRACKING — FOR DEMONSTRATION ONLY',
+                            style: TextStyle(
+                              color: AppTheme.primaryBrown,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (_currentOrder.isDemo) ...[
+                  const _DemoDataLabel(),
+                  const SizedBox(height: 12),
+                ],
                 const SizedBox(height: 14),
                 TrackingTimeline(
-                  events: _currentOrder.trackingEvents,
-                  currentStatus: _currentOrder.status,
+                  events: _currentOrder.demoTrackingEnabled
+                      ? SimulatedTrackingData.eventsFor(_currentOrder)
+                      : _currentOrder.trackingEvents
+                            .where(
+                              (event) =>
+                                  event.source != 'demo' &&
+                                  event.source != 'simulation',
+                            )
+                            .toList(),
+                  currentStatus: _currentOrder.demoTrackingEnabled
+                      ? null
+                      : _currentOrder.status,
+                  isDemo: _currentOrder.isDemo,
+                  isSimulated: _currentOrder.demoTrackingEnabled,
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () => context.push('/map/${_currentOrder.id}'),
+                    icon: const Icon(Icons.map_outlined),
+                    label: const Text('Track on Map'),
+                  ),
                 ),
                 const SizedBox(height: 32),
               ],
@@ -393,15 +559,15 @@ class _ProductImage extends StatelessWidget {
   }
 
   Widget _fallback() => Container(
-        width: 72,
-        height: 72,
-        decoration: BoxDecoration(
-          color: platformColor.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: platformColor.withValues(alpha: 0.3)),
-        ),
-        child: Icon(platformIcon, size: 30, color: platformColor),
-      );
+    width: 72,
+    height: 72,
+    decoration: BoxDecoration(
+      color: platformColor.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: platformColor.withValues(alpha: 0.3)),
+    ),
+    child: Icon(platformIcon, size: 30, color: platformColor),
+  );
 }
 
 class _InfoGrid extends StatelessWidget {
@@ -418,48 +584,143 @@ class _InfoGrid extends StatelessWidget {
         border: Border.all(color: AppTheme.cardBorder),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _row(context, 'Platform Order ID', order.platformOrderId,
-              Icons.receipt_long_outlined),
+          Text(
+            'Order Information',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          _row(
+            context,
+            'Shopping Platform',
+            order.platformName,
+            Icons.store_outlined,
+          ),
+          _row(
+            context,
+            'Platform Order ID',
+            order.platformOrderId,
+            Icons.receipt_long_outlined,
+          ),
           if (order.category != null)
             _row(context, 'Category', order.category!, Icons.category_outlined),
-          if (order.trackingNumber != null)
-            _row(context, 'Tracking Number', order.trackingNumber!,
-                Icons.qr_code_outlined),
-          if (order.courierName != null)
-            _row(context, 'Courier', order.courierName!,
-                Icons.local_shipping_outlined),
           _row(
-              context,
-              'Price',
-              CurrencyUtils.format(order.price, order.currency) +
-                  (order.quantity > 1 ? ' × ${order.quantity}' : ''),
-              Icons.payments_outlined),
-          _row(context, 'Ordered On',
-              AppDateUtils.formatShort(order.orderedAt), Icons.calendar_today_outlined),
+            context,
+            'Price',
+            CurrencyUtils.format(order.price, order.currency) +
+                (order.quantity > 1 ? ' × ${order.quantity}' : ''),
+            Icons.payments_outlined,
+          ),
+          _row(
+            context,
+            'Ordered On',
+            AppDateUtils.formatShort(order.orderedAt),
+            Icons.calendar_today_outlined,
+          ),
           if (order.expectedDeliveryAt != null)
             _row(
-                context,
-                'Expected Delivery',
-                '${AppDateUtils.formatShort(order.expectedDeliveryAt)} (${AppDateUtils.relativeLabel(order.expectedDeliveryAt)})',
-                Icons.event_outlined),
+              context,
+              'Expected Delivery',
+              '${AppDateUtils.formatShort(order.expectedDeliveryAt)} (${AppDateUtils.relativeLabel(order.expectedDeliveryAt)})',
+              Icons.event_outlined,
+            ),
           if (order.deliveredAt != null)
-            _row(context, 'Delivered On',
-                AppDateUtils.formatShort(order.deliveredAt), Icons.done_all),
+            _row(
+              context,
+              'Delivered On',
+              AppDateUtils.formatShort(order.deliveredAt),
+              Icons.done_all,
+            ),
+
+          const Divider(height: 24),
+          Text(
+            'Courier and Tracking Information',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          if (order.courierName != null)
+            _row(
+              context,
+              'Courier Partner',
+              order.courierName!,
+              Icons.local_shipping_outlined,
+            ),
+          if (order.trackingNumber != null)
+            _row(
+              context,
+              'Courier Tracking ID',
+              order.trackingNumber!,
+              Icons.qr_code_outlined,
+            ),
+          if (order.courierContact != null)
+            _row(
+              context,
+              'Courier Contact',
+              order.courierContact!,
+              Icons.phone_outlined,
+            ),
+          if (order.trackingUrl != null)
+            _row(
+              context,
+              'Tracking URL',
+              order.trackingUrl!,
+              Icons.link_outlined,
+            ),
+          if (order.pickupLocation != null)
+            _row(
+              context,
+              'Pickup Location',
+              order.pickupLocation!,
+              Icons.inventory_2_outlined,
+            ),
+          if (order.deliveryLocation != null)
+            _row(
+              context,
+              'Delivery Destination',
+              order.deliveryLocation!,
+              Icons.location_on_outlined,
+            ),
+          if (order.courierName == null &&
+              order.trackingNumber == null &&
+              order.courierContact == null &&
+              order.trackingUrl == null &&
+              order.pickupLocation == null &&
+              order.deliveryLocation == null)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Courier details are optional and can be added later.',
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+              ),
+            ),
+          if (order.additionalNotes != null)
+            _row(
+              context,
+              'Additional Notes',
+              order.additionalNotes!,
+              Icons.notes_outlined,
+            ),
           if (order.trackingSource != null)
-            _row(context, 'Tracking Source', order.trackingSource!,
-                Icons.source_outlined),
+            _row(
+              context,
+              'Tracking Source',
+              order.trackingSource!,
+              Icons.source_outlined,
+            ),
           if (order.lastSyncedAt != null)
-            _row(context, 'Last Updated',
-                AppDateUtils.formatDateTime(order.lastSyncedAt),
-                Icons.sync_outlined),
+            _row(
+              context,
+              'Last Updated',
+              AppDateUtils.formatDateTime(order.lastSyncedAt),
+              Icons.sync_outlined,
+            ),
         ],
       ),
     );
   }
 
-  Widget _row(
-      BuildContext context, String label, String value, IconData icon) {
+  Widget _row(BuildContext context, String label, String value, IconData icon) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -469,20 +730,91 @@ class _InfoGrid extends StatelessWidget {
           const SizedBox(width: 10),
           SizedBox(
             width: 130,
-            child: Text(label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.textSecondary,
-                    )),
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall
+                  ?.copyWith(color: AppTheme.textSecondary),
+            ),
           ),
           Expanded(
             child: Text(
               value,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.cloudWhite,
-                  ),
+              style: Theme.of(context).textTheme.bodyMedium
+                  ?.copyWith(color: AppTheme.cloudWhite),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DemoTrackingCard extends StatelessWidget {
+  final bool enabled;
+  final bool isSaving;
+  final ValueChanged<bool> onChanged;
+
+  const _DemoTrackingCard({
+    required this.enabled,
+    required this.isSaving,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.cardBorder),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          secondary: const Icon(
+            Icons.science_outlined,
+            color: AppTheme.terracotta,
+          ),
+          title: const Text(
+            'Demo Tracking',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          subtitle: const Text(
+            'Display a simulated tracking timeline and sample delivery route for demonstration purposes.',
+            style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+          ),
+          value: enabled,
+          onChanged: isSaving ? null : onChanged,
+        ),
+      ),
+    );
+  }
+}
+
+class _DemoDataLabel extends StatelessWidget {
+  const _DemoDataLabel();
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppTheme.terracotta.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppTheme.terracotta),
+        ),
+        child: const Text(
+          'DEMO DATA',
+          style: TextStyle(
+            color: AppTheme.primaryBrown,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
     );
   }
@@ -507,24 +839,18 @@ class _ActionButtons extends StatelessWidget {
       spacing: 10,
       runSpacing: 10,
       children: [
-        // Refresh tracking button
-        OutlinedButton.icon(
-          onPressed: isRefreshing ? null : onRefresh,
-          icon: isRefreshing
-              ? const SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.sync, size: 16),
-          label: Text(isRefreshing ? 'Checking...' : 'Refresh Status'),
-        ),
-        // Track on Map
-        FilledButton.icon(
-          onPressed: () => context.push('/map/${order.id}'),
-          icon: const Icon(Icons.map_outlined, size: 18),
-          label: const Text('Track on Map'),
-        ),
+        if (!order.isDemo)
+          OutlinedButton.icon(
+            onPressed: isRefreshing ? null : onRefresh,
+            icon: isRefreshing
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.sync, size: 16),
+            label: Text(isRefreshing ? 'Checking...' : 'Refresh Status'),
+          ),
         // Courier tracking URL
         if (order.trackingUrl != null)
           OutlinedButton.icon(
@@ -587,8 +913,10 @@ class _DeliveryReminderCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text('Delivery Alert & Reminder',
-                    style: theme.textTheme.titleMedium),
+                child: Text(
+                  'Delivery Alert & Reminder',
+                  style: theme.textTheme.titleMedium,
+                ),
               ),
               Switch(
                 value: order.reminderEnabled && !isTerminal,

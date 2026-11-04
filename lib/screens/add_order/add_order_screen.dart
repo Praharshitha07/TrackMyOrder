@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
+
 import '../scanner/barcode_scanner_screen.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
@@ -29,6 +30,10 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
   late final TextEditingController _productImageUrlCtrl;
   late final TextEditingController _courierNameCtrl;
   late final TextEditingController _trackingNumberCtrl;
+  late final TextEditingController _courierContactCtrl;
+  late final TextEditingController _pickupLocationCtrl;
+  late final TextEditingController _deliveryLocationCtrl;
+  late final TextEditingController _additionalNotesCtrl;
   late final TextEditingController _quantityCtrl;
   late final TextEditingController _priceCtrl;
   late final TextEditingController _trackingUrlCtrl;
@@ -60,13 +65,26 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
     _expectedDeliveryAt = o?.expectedDeliveryAt;
 
     _productNameCtrl = TextEditingController(text: o?.productName ?? '');
-    _platformOrderIdCtrl = TextEditingController(text: o?.platformOrderId ?? '');
-    _productImageUrlCtrl = TextEditingController(text: o?.productImageUrl ?? '');
+    _platformOrderIdCtrl = TextEditingController(
+      text: o?.platformOrderId ?? '',
+    );
+    _productImageUrlCtrl = TextEditingController(
+      text: o?.productImageUrl ?? '',
+    );
     _courierNameCtrl = TextEditingController(text: o?.courierName ?? '');
     _trackingNumberCtrl = TextEditingController(text: o?.trackingNumber ?? '');
+    _courierContactCtrl = TextEditingController(text: o?.courierContact ?? '');
+    _pickupLocationCtrl = TextEditingController(text: o?.pickupLocation ?? '');
+    _deliveryLocationCtrl = TextEditingController(
+      text: o?.deliveryLocation ?? '',
+    );
+    _additionalNotesCtrl = TextEditingController(
+      text: o?.additionalNotes ?? '',
+    );
     _quantityCtrl = TextEditingController(text: '${o?.quantity ?? 1}');
     _priceCtrl = TextEditingController(
-        text: o != null ? o.price.toStringAsFixed(2) : '');
+      text: o != null ? o.price.toStringAsFixed(2) : '',
+    );
     _trackingUrlCtrl = TextEditingController(text: o?.trackingUrl ?? '');
     _orderUrlCtrl = TextEditingController(text: o?.orderUrl ?? '');
   }
@@ -78,6 +96,10 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
     _productImageUrlCtrl.dispose();
     _courierNameCtrl.dispose();
     _trackingNumberCtrl.dispose();
+    _courierContactCtrl.dispose();
+    _pickupLocationCtrl.dispose();
+    _deliveryLocationCtrl.dispose();
+    _additionalNotesCtrl.dispose();
     _quantityCtrl.dispose();
     _priceCtrl.dispose();
     _trackingUrlCtrl.dispose();
@@ -113,43 +135,84 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
       final ordersProvider = context.read<OrdersProvider>();
       final now = DateTime.now();
 
-      final order = OrderModel(
-        id: _isEditing ? widget.existingOrder!.id : _uuid.v4(),
-        userId: auth.effectiveUserId,
-        platformName: _selectedPlatform,
-        platformOrderId: _platformOrderIdCtrl.text.trim(),
-        productName: _productNameCtrl.text.trim(),
-        productImageUrl: _productImageUrlCtrl.text.trim().isEmpty
-            ? null
-            : _productImageUrlCtrl.text.trim(),
-        quantity: int.tryParse(_quantityCtrl.text) ?? 1,
-        price: double.tryParse(_priceCtrl.text) ?? 0.0,
-        currency: _selectedCurrency,
-        category: _selectedCategory,
-        courierName: _courierNameCtrl.text.trim().isEmpty
-            ? null
-            : _courierNameCtrl.text.trim(),
-        trackingNumber: _trackingNumberCtrl.text.trim().isEmpty
-            ? null
-            : _trackingNumberCtrl.text.trim(),
-        status: _selectedStatus,
-        orderedAt: _orderedAt ?? now,
-        expectedDeliveryAt: _expectedDeliveryAt,
-        reminderEnabled: _reminderEnabled,
-        reminderPreference: _reminderPreference,
-        trackingUrl: _trackingUrlCtrl.text.trim().isEmpty
-            ? null
-            : _trackingUrlCtrl.text.trim(),
-        orderUrl: _orderUrlCtrl.text.trim().isEmpty
-            ? null
-            : _orderUrlCtrl.text.trim(),
-        createdAt: _isEditing ? widget.existingOrder!.createdAt : now,
-        updatedAt: now,
-        isDemo: false,
-        trackingEvents: _isEditing
-            ? widget.existingOrder!.trackingEvents
-            : [],
-      );
+      final existing = widget.existingOrder;
+      final imageUrl = _productImageUrlCtrl.text.trim();
+      final courierName = _courierNameCtrl.text.trim();
+      final trackingNumber = _trackingNumberCtrl.text.trim();
+      final courierContact = _courierContactCtrl.text.trim();
+      final pickupLocation = _pickupLocationCtrl.text.trim();
+      final deliveryLocation = _deliveryLocationCtrl.text.trim();
+      final additionalNotes = _additionalNotesCtrl.text.trim();
+      final trackingUrl = _trackingUrlCtrl.text.trim();
+      final orderUrl = _orderUrlCtrl.text.trim();
+
+      final order = existing == null
+          ? OrderModel(
+              id: _uuid.v4(),
+              userId: auth.effectiveUserId,
+              platformName: _selectedPlatform,
+              platformOrderId: _platformOrderIdCtrl.text.trim(),
+              productName: _productNameCtrl.text.trim(),
+              productImageUrl: imageUrl.isEmpty ? null : imageUrl,
+              quantity: int.tryParse(_quantityCtrl.text) ?? 1,
+              price: double.tryParse(_priceCtrl.text) ?? 0.0,
+              currency: _selectedCurrency,
+              category: _selectedCategory,
+              courierName: courierName.isEmpty ? null : courierName,
+              trackingNumber: trackingNumber.isEmpty ? null : trackingNumber,
+              courierContact: courierContact.isEmpty ? null : courierContact,
+              pickupLocation: pickupLocation.isEmpty ? null : pickupLocation,
+              deliveryLocation: deliveryLocation.isEmpty
+                  ? null
+                  : deliveryLocation,
+              additionalNotes: additionalNotes.isEmpty ? null : additionalNotes,
+              status: _selectedStatus,
+              orderedAt: _orderedAt ?? now,
+              expectedDeliveryAt: _expectedDeliveryAt,
+              reminderEnabled: _reminderEnabled,
+              reminderPreference: _reminderPreference,
+              trackingUrl: trackingUrl.isEmpty ? null : trackingUrl,
+              orderUrl: orderUrl.isEmpty ? null : orderUrl,
+              createdAt: now,
+              updatedAt: now,
+              demoTrackingEnabled: true,
+            )
+          : existing.copyWith(
+              platformName: _selectedPlatform,
+              platformOrderId: _platformOrderIdCtrl.text.trim(),
+              productName: _productNameCtrl.text.trim(),
+              productImageUrl: imageUrl.isEmpty ? null : imageUrl,
+              clearProductImage: imageUrl.isEmpty,
+              quantity: int.tryParse(_quantityCtrl.text) ?? 1,
+              price: double.tryParse(_priceCtrl.text) ?? 0.0,
+              currency: _selectedCurrency,
+              category: _selectedCategory,
+              courierName: courierName.isEmpty ? null : courierName,
+              clearCourierName: courierName.isEmpty,
+              trackingNumber: trackingNumber.isEmpty ? null : trackingNumber,
+              clearTrackingNumber: trackingNumber.isEmpty,
+              courierContact: courierContact.isEmpty ? null : courierContact,
+              clearCourierContact: courierContact.isEmpty,
+              pickupLocation: pickupLocation.isEmpty ? null : pickupLocation,
+              clearPickupLocation: pickupLocation.isEmpty,
+              deliveryLocation: deliveryLocation.isEmpty
+                  ? null
+                  : deliveryLocation,
+              clearDeliveryLocation: deliveryLocation.isEmpty,
+              additionalNotes: additionalNotes.isEmpty ? null : additionalNotes,
+              clearAdditionalNotes: additionalNotes.isEmpty,
+              status: _selectedStatus,
+              orderedAt: _orderedAt ?? now,
+              expectedDeliveryAt: _expectedDeliveryAt,
+              clearExpectedDelivery: _expectedDeliveryAt == null,
+              reminderEnabled: _reminderEnabled,
+              reminderPreference: _reminderPreference,
+              trackingUrl: trackingUrl.isEmpty ? null : trackingUrl,
+              clearTrackingUrl: trackingUrl.isEmpty,
+              orderUrl: orderUrl.isEmpty ? null : orderUrl,
+              clearOrderUrl: orderUrl.isEmpty,
+              updatedAt: now,
+            );
 
       if (_isEditing) {
         await ordersProvider.updateOrder(order);
@@ -161,7 +224,8 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-                _isEditing ? 'Order updated.' : 'Order saved successfully.'),
+              _isEditing ? 'Order updated.' : 'Order saved successfully.',
+            ),
           ),
         );
         context.pop();
@@ -171,7 +235,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(e.toString().replaceFirst('Exception: ', '')),
-            backgroundColor: const Color(0xFFF87171),
+            backgroundColor: AppTheme.error,
           ),
         );
       }
@@ -194,7 +258,9 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppTheme.electricLime),
+                      strokeWidth: 2,
+                      color: AppTheme.electricLime,
+                    ),
                   )
                 : const Text('Save'),
           ),
@@ -263,7 +329,8 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                     validator: (v) {
                       if (v != null && v.trim().isNotEmpty) {
                         final uri = Uri.tryParse(v.trim());
-                        if (uri == null || (!uri.isScheme('http') && !uri.isScheme('https'))) {
+                        if (uri == null ||
+                            (!uri.isScheme('http') && !uri.isScheme('https'))) {
                           return 'Enter a valid URL starting with http:// or https://';
                         }
                       }
@@ -289,10 +356,12 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                           label: 'Price',
                           icon: Icons.payments_outlined,
                           keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true),
+                            decimal: true,
+                          ),
                           inputFormatters: [
                             FilteringTextInputFormatter.allow(
-                                RegExp(r'^\d*\.?\d{0,2}'))
+                              RegExp(r'^\d*\.?\d{0,2}'),
+                            ),
                           ],
                           validator: (v) {
                             if (v == null || v.isEmpty) return 'Required';
@@ -323,7 +392,7 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                           icon: Icons.numbers,
                           keyboardType: TextInputType.number,
                           inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly
+                            FilteringTextInputFormatter.digitsOnly,
                           ],
                           validator: (v) {
                             if (v == null || v.isEmpty) return 'Required';
@@ -358,7 +427,8 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                     validator: (v) {
                       if (v != null && v.trim().isNotEmpty) {
                         final uri = Uri.tryParse(v.trim());
-                        if (uri == null || (!uri.isScheme('http') && !uri.isScheme('https'))) {
+                        if (uri == null ||
+                            (!uri.isScheme('http') && !uri.isScheme('https'))) {
                           return 'Enter a valid URL (http:// or https://)';
                         }
                       }
@@ -387,13 +457,17 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                     spacing: 8,
                     runSpacing: 4,
                     children: AppConstants.supportedCouriers.map((c) {
-                      final isSelected = _courierNameCtrl.text.toLowerCase() == c.toLowerCase();
+                      final isSelected =
+                          _courierNameCtrl.text.toLowerCase() ==
+                          c.toLowerCase();
                       return ChoiceChip(
                         label: Text(c, style: const TextStyle(fontSize: 12)),
                         selected: isSelected,
                         onSelected: (selected) {
                           setState(() {
-                            _courierNameCtrl.text = selected ? (c == 'Other' ? '' : c) : '';
+                            _courierNameCtrl.text = selected
+                                ? (c == 'Other' ? '' : c)
+                                : '';
                           });
                         },
                       );
@@ -416,7 +490,10 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                         padding: const EdgeInsets.only(top: 4.0),
                         child: IconButton.filledTonal(
                           onPressed: _scanBarcode,
-                          icon: const Icon(Icons.qr_code_scanner, color: AppTheme.electricLime),
+                          icon: const Icon(
+                            Icons.qr_code_scanner,
+                            color: AppTheme.electricLime,
+                          ),
                           tooltip: 'Scan Tracking Barcode/QR',
                         ),
                       ),
@@ -431,12 +508,41 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                     validator: (v) {
                       if (v != null && v.trim().isNotEmpty) {
                         final uri = Uri.tryParse(v.trim());
-                        if (uri == null || (!uri.isScheme('http') && !uri.isScheme('https'))) {
+                        if (uri == null ||
+                            (!uri.isScheme('http') && !uri.isScheme('https'))) {
                           return 'Enter a valid URL (http:// or https://)';
                         }
                       }
                       return null;
                     },
+                  ),
+                  const SizedBox(height: 14),
+                  _field(
+                    controller: _courierContactCtrl,
+                    label: 'Courier Contact Number (optional)',
+                    icon: Icons.phone_outlined,
+                    keyboardType: TextInputType.phone,
+                    validator: (value) {
+                      final contact = value?.trim() ?? '';
+                      if (contact.isNotEmpty &&
+                          !RegExp(r'^\+?[0-9()\-\s]{7,20}$')
+                              .hasMatch(contact)) {
+                        return 'Enter a valid contact number';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  _field(
+                    controller: _pickupLocationCtrl,
+                    label: 'Pickup Location (optional)',
+                    icon: Icons.inventory_2_outlined,
+                  ),
+                  const SizedBox(height: 14),
+                  _field(
+                    controller: _deliveryLocationCtrl,
+                    label: 'Delivery Destination (optional)',
+                    icon: Icons.location_on_outlined,
                   ),
                   const SizedBox(height: 24),
 
@@ -468,6 +574,16 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                   ),
                   const SizedBox(height: 24),
 
+                  _sectionHeader('Additional Notes'),
+                  const SizedBox(height: 12),
+                  _field(
+                    controller: _additionalNotesCtrl,
+                    label: 'Notes (optional)',
+                    icon: Icons.notes_outlined,
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 24),
+
                   // ── Delivery Reminders ─────────────────────────────────
                   _sectionHeader('Delivery Reminders'),
                   const SizedBox(height: 12),
@@ -481,32 +597,53 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: const Text('Delivery Alert Reminder',
-                              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                          subtitle: const Text(
-                            'Schedule local morning alert at 09:00 AM for this order.',
-                            style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                        Material(
+                          color: Colors.transparent,
+                          child: SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text(
+                              'Delivery Alert Reminder',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                            subtitle: const Text(
+                              'Schedule local morning alert at 09:00 AM for this order.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.textMuted,
+                              ),
+                            ),
+                            value: _reminderEnabled,
+                            activeThumbColor: AppTheme.electricLime,
+                            onChanged: _expectedDeliveryAt == null
+                                ? null
+                                : (val) =>
+                                      setState(() => _reminderEnabled = val),
                           ),
-                          value: _reminderEnabled,
-                          activeThumbColor: AppTheme.electricLime,
-                          onChanged: _expectedDeliveryAt == null
-                              ? null
-                              : (val) => setState(() => _reminderEnabled = val),
                         ),
                         if (_expectedDeliveryAt == null)
                           const Padding(
                             padding: EdgeInsets.only(top: 4),
                             child: Text(
                               '⚠️ Please select an Expected Delivery date above to enable reminders.',
-                              style: TextStyle(fontSize: 12, color: AppTheme.warningAmber),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.warningAmber,
+                              ),
                             ),
                           ),
-                        if (_reminderEnabled && _expectedDeliveryAt != null) ...[
+                        if (_reminderEnabled &&
+                            _expectedDeliveryAt != null) ...[
                           const Divider(height: 20),
-                          const Text('Notification Timing:',
-                              style: TextStyle(fontSize: 12, color: AppTheme.textMuted)),
+                          const Text(
+                            'Notification Timing:',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.textMuted,
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           SegmentedButton<String>(
                             segments: const [
@@ -518,7 +655,10 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                               ButtonSegment(
                                 value: 'day_before',
                                 label: Text('1 day before'),
-                                icon: Icon(Icons.notifications_active_outlined, size: 16),
+                                icon: Icon(
+                                  Icons.notifications_active_outlined,
+                                  size: 16,
+                                ),
                               ),
                             ],
                             selected: {_reminderPreference},
@@ -553,9 +693,13 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
                                   height: 20,
                                   width: 20,
                                   child: CircularProgressIndicator(
-                                      strokeWidth: 2, color: AppTheme.midnightNavy),
+                                    strokeWidth: 2,
+                                    color: AppTheme.midnightNavy,
+                                  ),
                                 )
-                              : Text(_isEditing ? 'Update Order' : 'Save Order'),
+                              : Text(
+                                  _isEditing ? 'Update Order' : 'Save Order',
+                                ),
                         ),
                       ),
                     ],
@@ -589,11 +733,13 @@ class _AddOrderScreenState extends State<AddOrderScreen> {
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
+    int maxLines = 1,
   }) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
+      maxLines: maxLines,
       decoration: InputDecoration(
         labelText: label + (required ? ' *' : ''),
         hintText: hint,
@@ -625,21 +771,23 @@ class _DropdownField<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     return DropdownButtonFormField<T>(
       initialValue: value,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
-      ),
+      isExpanded: true,
+      decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
       dropdownColor: AppTheme.surface,
       style: const TextStyle(color: AppTheme.cloudWhite, fontSize: 14),
       items: items
-          .map((item) => DropdownMenuItem<T>(
-                value: item,
-                child: Text(
-                  itemLabel(item),
-                  style: const TextStyle(
-                      color: AppTheme.cloudWhite, fontSize: 14),
+          .map(
+            (item) => DropdownMenuItem<T>(
+              value: item,
+              child: Text(
+                itemLabel(item),
+                style: const TextStyle(
+                  color: AppTheme.cloudWhite,
+                  fontSize: 14,
                 ),
-              ))
+              ),
+            ),
+          )
           .toList(),
       onChanged: onChanged,
     );

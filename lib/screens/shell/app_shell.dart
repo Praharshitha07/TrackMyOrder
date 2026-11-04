@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../core/theme/app_theme.dart';
 
 /// Responsive navigation shell.
@@ -12,9 +13,18 @@ class AppShell extends StatelessWidget {
 
   static const _destinations = [
     _NavDest('/home', Icons.home_outlined, Icons.home, 'Home'),
-    _NavDest('/orders', Icons.inventory_2_outlined, Icons.inventory_2, 'Orders'),
-    _NavDest('/analytics', Icons.bar_chart_outlined, Icons.bar_chart, 'Analytics'),
-    _NavDest('/platforms', Icons.store_outlined, Icons.store, 'Platforms'),
+    _NavDest(
+      '/orders',
+      Icons.inventory_2_outlined,
+      Icons.inventory_2,
+      'Orders',
+    ),
+    _NavDest(
+      '/analytics',
+      Icons.bar_chart_outlined,
+      Icons.bar_chart,
+      'Analytics',
+    ),
     _NavDest('/profile', Icons.person_outline, Icons.person, 'Profile'),
   ];
 
@@ -37,8 +47,7 @@ class AppShell extends StatelessWidget {
           children: [
             NavigationRail(
               selectedIndex: selectedIndex,
-              onDestinationSelected: (i) =>
-                  context.go(_destinations[i].path),
+              onDestinationSelected: (i) => context.go(_destinations[i].path),
               labelType: NavigationRailLabelType.all,
               useIndicator: true,
               destinations: _destinations.map((d) {
@@ -52,8 +61,11 @@ class AppShell extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Column(
                   children: [
-                    const Icon(Icons.local_shipping,
-                        color: AppTheme.electricLime, size: 28),
+                    const Icon(
+                      Icons.local_shipping,
+                      color: AppTheme.electricLime,
+                      size: 28,
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       'TMO',

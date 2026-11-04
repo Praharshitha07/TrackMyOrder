@@ -2,43 +2,44 @@ import 'package:flutter/material.dart';
 
 /// Track My Order — centralized Material 3 design system.
 ///
-/// Palette
-/// ─────────────────────────────────────────
-/// Midnight Navy   #111827
-/// Electric Lime   #A3E635
-/// Cloud White     #F8FAFC
+/// Soft Beige + Terracotta palette.
 class AppTheme {
   AppTheme._();
 
-  // ── Brand colours ────────────────────────────────────────────────────────
-  static const Color midnightNavy = Color(0xFF111827);
-  static const Color electricLime = Color(0xFFA3E635);
-  static const Color cloudWhite = Color(0xFFF8FAFC);
+  static const Color background = Color(0xFFF8F3EC);
+  static const Color card = Color(0xFFFFFFFF);
+  static const Color primaryBrown = Color(0xFF49352D);
+  static const Color secondaryText = Color(0xFF8D7567);
+  static const Color terracotta = Color(0xFFC97955);
+  static const Color border = Color(0xFFE9DED4);
+  static const Color success = Color(0xFF438568);
+  static const Color warning = Color(0xFFD69A46);
+  static const Color error = Color(0xFFC65C52);
 
-  // ── Semantic / surface colours ───────────────────────────────────────────
-  static const Color surface = Color(0xFF1E2A3A);
-  static const Color surfaceVariant = Color(0xFF243447);
-  static const Color surfaceLight = Color(0xFF243447);
-  static const Color cardBorder = Color(0xFF2D3D52);
-  static const Color divider = Color(0xFF263244);
-  static const Color warningAmber = Color(0xFFFBBF24);
+  // Retain established names so existing widgets use the shared palette.
+  static const Color midnightNavy = background;
+  static const Color electricLime = terracotta;
+  static const Color cloudWhite = primaryBrown;
+  static const Color surface = card;
+  static const Color surfaceVariant = background;
+  static const Color surfaceLight = card;
+  static const Color cardBorder = border;
+  static const Color divider = border;
+  static const Color warningAmber = warning;
+  static const Color textPrimary = primaryBrown;
+  static const Color textSecondary = secondaryText;
+  static const Color textMuted = secondaryText;
 
-  // Text
-  static const Color textPrimary = cloudWhite;
-  static const Color textSecondary = Color(0xFF94A3B8);
-  static const Color textMuted = Color(0xFF64748B);
-
-  // Status colours
-  static const Color statusOrdered = Color(0xFF60A5FA);    // blue-400
-  static const Color statusConfirmed = Color(0xFF818CF8);  // indigo-400
-  static const Color statusPacked = Color(0xFFA78BFA);     // violet-400
-  static const Color statusShipped = Color(0xFF34D399);    // emerald-400
-  static const Color statusInTransit = Color(0xFF38BDF8);  // sky-400
-  static const Color statusOutForDelivery = electricLime;
-  static const Color statusDelivered = Color(0xFF4ADE80);  // green-400
-  static const Color statusDelayed = Color(0xFFFBBF24);    // amber-400
-  static const Color statusCancelled = Color(0xFFF87171);  // red-400
-  static const Color statusReturned = Color(0xFFFB923C);   // orange-400
+  static const Color statusOrdered = Color(0xFF8D7567);
+  static const Color statusConfirmed = Color(0xFF9A6C54);
+  static const Color statusPacked = Color(0xFFAA7656);
+  static const Color statusShipped = Color(0xFFB77D54);
+  static const Color statusInTransit = Color(0xFFB16F4F);
+  static const Color statusOutForDelivery = terracotta;
+  static const Color statusDelivered = success;
+  static const Color statusDelayed = warning;
+  static const Color statusCancelled = error;
+  static const Color statusReturned = Color(0xFF946653);
 
   // ── Typography ───────────────────────────────────────────────────────────
   static const String _fontFamily = 'Roboto';
@@ -146,31 +147,30 @@ class AppTheme {
     );
   }
 
-  // ── Dark Theme ───────────────────────────────────────────────────────────
-  static ThemeData get darkTheme {
-    final colorScheme = ColorScheme.dark(
+  static ThemeData get lightTheme {
+    final colorScheme = ColorScheme.light(
       primary: electricLime,
-      onPrimary: midnightNavy,
-      primaryContainer: const Color(0xFF1A2E0A),
-      onPrimaryContainer: electricLime,
-      secondary: const Color(0xFF38BDF8),
-      onSecondary: midnightNavy,
-      secondaryContainer: const Color(0xFF0C2A3A),
-      onSecondaryContainer: const Color(0xFF38BDF8),
-      surface: midnightNavy,
-      onSurface: cloudWhite,
+      onPrimary: primaryBrown,
+      primaryContainer: const Color(0xFFF1DED3),
+      onPrimaryContainer: primaryBrown,
+      secondary: secondaryText,
+      onSecondary: card,
+      secondaryContainer: const Color(0xFFF0E6DD),
+      onSecondaryContainer: primaryBrown,
+      surface: card,
+      onSurface: primaryBrown,
       surfaceContainerHighest: surfaceVariant,
       onSurfaceVariant: textSecondary,
       outline: cardBorder,
       outlineVariant: divider,
-      error: const Color(0xFFF87171),
-      onError: midnightNavy,
+      error: AppTheme.error,
+      onError: card,
     );
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: midnightNavy,
+      scaffoldBackgroundColor: background,
       fontFamily: _fontFamily,
       textTheme: _buildTextTheme(),
 
@@ -188,7 +188,8 @@ class AppTheme {
       // Cards
       cardTheme: CardThemeData(
         color: surface,
-        elevation: 0,
+        elevation: 1,
+        shadowColor: primaryBrown.withValues(alpha: 0.06),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: cardBorder, width: 1),
@@ -238,14 +239,14 @@ class AppTheme {
           fontWeight: FontWeight.w400,
           color: textSecondary,
         ),
-        indicatorColor: Color(0x26A3E635),
+        indicatorColor: Color(0x26C97955),
       ),
 
       // Buttons
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: electricLime,
-          foregroundColor: midnightNavy,
+          foregroundColor: primaryBrown,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(
@@ -290,7 +291,7 @@ class AppTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: electricLime,
-          foregroundColor: midnightNavy,
+          foregroundColor: primaryBrown,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(
@@ -303,7 +304,10 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: surfaceVariant,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: cardBorder),
@@ -318,11 +322,11 @@ class AppTheme {
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFF87171)),
+          borderSide: const BorderSide(color: error),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFF87171), width: 1.5),
+          borderSide: const BorderSide(color: error, width: 1.5),
         ),
         labelStyle: const TextStyle(color: textSecondary, fontSize: 14),
         hintStyle: const TextStyle(color: textMuted, fontSize: 14),
@@ -348,9 +352,7 @@ class AppTheme {
           fontWeight: FontWeight.w600,
           color: electricLime,
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       ),
 
@@ -374,9 +376,7 @@ class AppTheme {
       // Dialog
       dialogTheme: DialogThemeData(
         backgroundColor: surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         titleTextStyle: _buildTextTheme().headlineMedium,
       ),
 
@@ -391,7 +391,7 @@ class AppTheme {
       // FloatingActionButton
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: electricLime,
-        foregroundColor: midnightNavy,
+        foregroundColor: primaryBrown,
         elevation: 2,
         shape: CircleBorder(),
       ),
@@ -406,7 +406,7 @@ class AppTheme {
       // Switch
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return midnightNavy;
+          if (states.contains(WidgetState.selected)) return card;
           return textSecondary;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
@@ -508,15 +508,15 @@ class AppTheme {
   static Color platformColor(String platform) {
     switch (platform.toLowerCase()) {
       case 'amazon':
-        return const Color(0xFFFF9900);
+        return const Color(0xFFA86A3D);
       case 'flipkart':
-        return const Color(0xFF2874F0);
+        return const Color(0xFF5C7184);
       case 'myntra':
-        return const Color(0xFFFF3F6C);
+        return const Color(0xFFB05C63);
       case 'nykaa':
-        return const Color(0xFFFC2779);
+        return const Color(0xFF9C5E7A);
       case 'meesho':
-        return const Color(0xFF9B2D8E);
+        return const Color(0xFF7E6683);
       default:
         return textSecondary;
     }

@@ -7,11 +7,8 @@ class AppConstants {
   static const String appVersion = '1.0.0';
 
   // Storage keys
-  static const String ordersKey = 'tmo_orders';
-  static const String userKey = 'tmo_user';
   static const String settingsKey = 'tmo_settings';
   static const String onboardingKey = 'tmo_onboarding_done';
-  static const String isDemoKey = 'tmo_is_demo';
 
   // Supported platforms
   static const List<String> shoppingPlatforms = [
@@ -82,8 +79,4 @@ class AppConstants {
     'SGD',
     'JPY',
   ];
-
-  // Demo mode notice
-  static const String demoModeNotice =
-      'Running in Demo Mode. Orders are stored locally on this device.';
 }

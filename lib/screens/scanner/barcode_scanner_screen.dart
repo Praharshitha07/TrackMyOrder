@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+
 import '../../core/theme/app_theme.dart';
 
 /// Full-featured camera barcode/QR scanner screen with clean overlay,
@@ -53,7 +54,10 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
             onPressed: () => _controller.toggleTorch(),
           ),
           IconButton(
-            icon: const Icon(Icons.flip_camera_ios_outlined, color: AppTheme.cloudWhite),
+            icon: const Icon(
+              Icons.flip_camera_ios_outlined,
+              color: AppTheme.cloudWhite,
+            ),
             tooltip: 'Flip Camera',
             onPressed: () => _controller.switchCamera(),
           ),
@@ -72,8 +76,11 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.videocam_off_outlined,
-                          size: 56, color: Color(0xFFF87171)),
+                      const Icon(
+                        Icons.videocam_off_outlined,
+                        size: 56,
+                        color: AppTheme.error,
+                      ),
                       const SizedBox(height: 16),
                       const Text(
                         'Camera Unavailable',
@@ -85,8 +92,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        error.errorDetails?.message ??
-                            'Camera permission is required to scan shipping barcodes.',
+                        error.errorDetails?.message ?? 'Camera permission is required to scan shipping barcodes.',
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           color: AppTheme.textSecondary,
@@ -108,9 +114,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
 
           // Custom Scanner Target Reticle
           Positioned.fill(
-            child: CustomPaint(
-              painter: _ScannerOverlayPainter(),
-            ),
+            child: CustomPaint(painter: _ScannerOverlayPainter()),
           ),
 
           // Top instructions banner
@@ -127,12 +131,19 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.qr_code_scanner, color: AppTheme.electricLime, size: 20),
+                  Icon(
+                    Icons.qr_code_scanner,
+                    color: AppTheme.electricLime,
+                    size: 20,
+                  ),
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       'Align barcode or QR code on shipping label within frame',
-                      style: TextStyle(color: AppTheme.cloudWhite, fontSize: 12),
+                      style: TextStyle(
+                        color: AppTheme.cloudWhite,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                 ],
@@ -154,7 +165,10 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
                   backgroundColor: AppTheme.surface,
                   foregroundColor: AppTheme.cloudWhite,
                   side: const BorderSide(color: AppTheme.cardBorder),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
                 ),
               ),
             ),
@@ -195,20 +209,52 @@ class _ScannerOverlayPainter extends CustomPainter {
     const cornerLength = 28.0;
 
     // Top-left
-    canvas.drawLine(Offset(left, top + cornerLength), Offset(left, top), cornerPaint);
-    canvas.drawLine(Offset(left, top), Offset(left + cornerLength, top), cornerPaint);
+    canvas.drawLine(
+      Offset(left, top + cornerLength),
+      Offset(left, top),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(left, top),
+      Offset(left + cornerLength, top),
+      cornerPaint,
+    );
 
     // Top-right
-    canvas.drawLine(Offset(left + scanSize - cornerLength, top), Offset(left + scanSize, top), cornerPaint);
-    canvas.drawLine(Offset(left + scanSize, top), Offset(left + scanSize, top + cornerLength), cornerPaint);
+    canvas.drawLine(
+      Offset(left + scanSize - cornerLength, top),
+      Offset(left + scanSize, top),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(left + scanSize, top),
+      Offset(left + scanSize, top + cornerLength),
+      cornerPaint,
+    );
 
     // Bottom-left
-    canvas.drawLine(Offset(left, top + scanSize - cornerLength), Offset(left, top + scanSize), cornerPaint);
-    canvas.drawLine(Offset(left, top + scanSize), Offset(left + cornerLength, top + scanSize), cornerPaint);
+    canvas.drawLine(
+      Offset(left, top + scanSize - cornerLength),
+      Offset(left, top + scanSize),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(left, top + scanSize),
+      Offset(left + cornerLength, top + scanSize),
+      cornerPaint,
+    );
 
     // Bottom-right
-    canvas.drawLine(Offset(left + scanSize - cornerLength, top + scanSize), Offset(left + scanSize, top + scanSize), cornerPaint);
-    canvas.drawLine(Offset(left + scanSize, top + scanSize), Offset(left + scanSize, top + scanSize - cornerLength), cornerPaint);
+    canvas.drawLine(
+      Offset(left + scanSize - cornerLength, top + scanSize),
+      Offset(left + scanSize, top + scanSize),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(left + scanSize, top + scanSize),
+      Offset(left + scanSize, top + scanSize - cornerLength),
+      cornerPaint,
+    );
   }
 
   @override

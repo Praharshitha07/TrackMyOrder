@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/orders_provider.dart';
@@ -42,8 +43,9 @@ class ProfileScreen extends StatelessWidget {
                     color: AppTheme.electricLime.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                     border: Border.all(
-                        color: AppTheme.electricLime.withValues(alpha: 0.4),
-                        width: 2),
+                      color: AppTheme.electricLime.withValues(alpha: 0.4),
+                      width: 2,
+                    ),
                   ),
                   child: Center(
                     child: Text(
@@ -57,14 +59,9 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 14),
-                Text(auth.isAuthenticated ? (user?.name ?? '—') : 'Guest User',
-                    style: theme.textTheme.headlineMedium),
+                Text(user?.name ?? '—', style: theme.textTheme.headlineMedium),
                 const SizedBox(height: 4),
-                Text(
-                    auth.isAuthenticated
-                        ? (user?.email ?? '—')
-                        : 'Using local offline storage',
-                    style: theme.textTheme.bodyMedium),
+                Text(user?.email ?? '—', style: theme.textTheme.bodyMedium),
                 const SizedBox(height: 28),
 
                 // ── Stats row ─────────────────────────────────────────
@@ -86,25 +83,25 @@ class ProfileScreen extends StatelessWidget {
                       context,
                       icon: Icons.person_outline,
                       title: 'Account Mode',
-                      trailing: auth.isAuthenticated ? 'Signed In' : 'Guest Mode',
+                      trailing: 'Firebase account',
                     ),
                     _tile(
                       context,
                       icon: Icons.badge_outlined,
                       title: 'Name',
-                      trailing: auth.isAuthenticated ? (user?.name ?? '—') : 'Guest',
+                      trailing: user?.name ?? '—',
                     ),
                     _tile(
                       context,
                       icon: Icons.email_outlined,
                       title: 'Email',
-                      trailing: auth.isAuthenticated ? (user?.email ?? '—') : 'Not registered',
+                      trailing: user?.email ?? '—',
                     ),
                     _tile(
                       context,
                       icon: Icons.storage_outlined,
                       title: 'Storage',
-                      trailing: 'Local device',
+                      trailing: 'Cloud Firestore',
                     ),
                   ],
                 ),
@@ -115,34 +112,90 @@ class ProfileScreen extends StatelessWidget {
                   title: 'Tools & Insights',
                   children: [
                     ListTile(
-                      leading: const Icon(Icons.insights, size: 20, color: AppTheme.electricLime),
-                      title: const Text('Spending Analytics',
-                          style: TextStyle(fontSize: 14, color: AppTheme.cloudWhite, fontWeight: FontWeight.w600)),
-                      subtitle: const Text('Order metrics, platform distribution, monthly spending history.',
-                          style: TextStyle(fontSize: 12, color: AppTheme.textMuted)),
-                      trailing: const Icon(Icons.chevron_right, size: 18, color: AppTheme.textMuted),
+                      leading: const Icon(
+                        Icons.insights,
+                        size: 20,
+                        color: AppTheme.electricLime,
+                      ),
+                      title: const Text(
+                        'Spending Analytics',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppTheme.cloudWhite,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        'Order metrics, platform distribution, monthly spending history.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
+                      trailing: const Icon(
+                        Icons.chevron_right,
+                        size: 18,
+                        color: AppTheme.textMuted,
+                      ),
                       dense: true,
                       onTap: () => context.push('/analytics'),
                     ),
                     const Divider(height: 1),
                     ListTile(
-                      leading: const Icon(Icons.download_outlined, size: 20, color: AppTheme.electricLime),
-                      title: const Text('Backup & Export',
-                          style: TextStyle(fontSize: 14, color: AppTheme.cloudWhite, fontWeight: FontWeight.w600)),
-                      subtitle: const Text('Export orders as CSV spreadsheet or JSON backup.',
-                          style: TextStyle(fontSize: 12, color: AppTheme.textMuted)),
-                      trailing: const Icon(Icons.chevron_right, size: 18, color: AppTheme.textMuted),
+                      leading: const Icon(
+                        Icons.download_outlined,
+                        size: 20,
+                        color: AppTheme.electricLime,
+                      ),
+                      title: const Text(
+                        'Backup & Export',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppTheme.cloudWhite,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        'Export orders as CSV spreadsheet or JSON backup.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
+                      trailing: const Icon(
+                        Icons.chevron_right,
+                        size: 18,
+                        color: AppTheme.textMuted,
+                      ),
                       dense: true,
                       onTap: () => context.push('/backup-export'),
                     ),
                     const Divider(height: 1),
                     ListTile(
-                      leading: const Icon(Icons.settings_outlined, size: 20, color: AppTheme.textSecondary),
-                      title: const Text('App Settings',
-                          style: TextStyle(fontSize: 14, color: AppTheme.cloudWhite)),
-                      subtitle: const Text('Notification reminders, demo orders toggle, and storage info.',
-                          style: TextStyle(fontSize: 12, color: AppTheme.textMuted)),
-                      trailing: const Icon(Icons.chevron_right, size: 18, color: AppTheme.textMuted),
+                      leading: const Icon(
+                        Icons.settings_outlined,
+                        size: 20,
+                        color: AppTheme.textSecondary,
+                      ),
+                      title: const Text(
+                        'App Settings',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppTheme.cloudWhite,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        'Notification reminders, demo data, and storage information.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
+                      trailing: const Icon(
+                        Icons.chevron_right,
+                        size: 18,
+                        color: AppTheme.textMuted,
+                      ),
                       dense: true,
                       onTap: () => context.push('/settings'),
                     ),
@@ -165,7 +218,8 @@ class ProfileScreen extends StatelessWidget {
                       context,
                       icon: Icons.local_shipping_outlined,
                       title: 'Courier APIs (Delhivery, Blue Dart, Ekart)',
-                      subtitle: 'Architecture ready — awaiting carrier API tokens.',
+                      subtitle:
+                          'Architecture ready — awaiting carrier API tokens.',
                       connected: false,
                     ),
                     _integrationTile(
@@ -174,15 +228,6 @@ class ProfileScreen extends StatelessWidget {
                       title: 'Email Import',
                       subtitle: 'Not available — requires OAuth consent.',
                       connected: false,
-                    ),
-                    _integrationTile(
-                      context,
-                      icon: Icons.cloud_sync_outlined,
-                      title: 'Guest-to-Cloud Order Migration',
-                      subtitle: auth.isAuthenticated
-                          ? 'Ready to migrate offline orders to your cloud account.'
-                          : 'Sign in to sync local orders to your account.',
-                      connected: auth.isAuthenticated,
                     ),
                   ],
                 ),
@@ -196,19 +241,19 @@ class ProfileScreen extends StatelessWidget {
                       context,
                       icon: Icons.shield_outlined,
                       title: 'Data Storage',
-                      trailing: 'On-device only',
+                      trailing: 'User-owned Firestore data',
                     ),
                     _tile(
                       context,
                       icon: Icons.lock_outline,
                       title: 'Passwords',
-                      trailing: 'Not sent to any server',
+                      trailing: 'Managed by Firebase Authentication',
                     ),
                     _tile(
                       context,
                       icon: Icons.cloud_off_outlined,
                       title: 'Cloud Sync',
-                      trailing: 'Not configured',
+                      trailing: 'Enabled for this account',
                     ),
                   ],
                 ),
@@ -217,21 +262,17 @@ class ProfileScreen extends StatelessWidget {
                 // ── Auth Action ───────────────────────────────────────
                 SizedBox(
                   width: double.infinity,
-                  child: auth.isAuthenticated
-                      ? OutlinedButton.icon(
-                          onPressed: () => _signOut(context, auth),
-                          icon: const Icon(Icons.logout, size: 18),
-                          label: const Text('Sign Out'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFFF87171),
-                            side: const BorderSide(color: Color(0xFFF87171)),
-                          ),
-                        )
-                      : FilledButton.icon(
-                          onPressed: () => context.go('/login'),
-                          icon: const Icon(Icons.login, size: 18),
-                          label: const Text('Sign In / Register'),
-                        ),
+                  child: OutlinedButton.icon(
+                    onPressed: auth.isLoading
+                        ? null
+                        : () => _signOut(context, auth),
+                    icon: const Icon(Icons.logout, size: 18),
+                    label: const Text('Sign Out'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.error,
+                      side: const BorderSide(color: AppTheme.error),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 32),
               ],
@@ -255,41 +296,45 @@ class ProfileScreen extends StatelessWidget {
         ),
         Text(
           label,
-          style: const TextStyle(
-              color: AppTheme.textSecondary, fontSize: 12),
+          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
         ),
       ],
     );
   }
 
-  Widget _tile(BuildContext context,
-      {required IconData icon,
-      required String title,
-      required String trailing}) {
+  Widget _tile(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String trailing,
+  }) {
     return ListTile(
       leading: Icon(icon, size: 20, color: AppTheme.textSecondary),
       title: Text(title, style: const TextStyle(fontSize: 14)),
-      trailing: Text(trailing,
-          style: Theme.of(context)
-              .textTheme
-              .bodySmall
-              ?.copyWith(color: AppTheme.textSecondary)),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+      trailing: Text(
+        trailing,
+        style: Theme.of(context).textTheme.bodySmall
+            ?.copyWith(color: AppTheme.textSecondary),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
       dense: true,
     );
   }
 
-  Widget _integrationTile(BuildContext context,
-      {required IconData icon,
-      required String title,
-      required String subtitle,
-      required bool connected}) {
+  Widget _integrationTile(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool connected,
+  }) {
     return ListTile(
       leading: Icon(icon, size: 20, color: AppTheme.textSecondary),
       title: Text(title, style: const TextStyle(fontSize: 14)),
-      subtitle: Text(subtitle,
-          style: const TextStyle(fontSize: 12, color: AppTheme.textMuted)),
+      subtitle: Text(
+        subtitle,
+        style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+      ),
       trailing: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
@@ -302,15 +347,12 @@ class ProfileScreen extends StatelessWidget {
           connected ? 'Connected' : 'Not connected',
           style: TextStyle(
             fontSize: 11,
-            color: connected
-                ? AppTheme.statusDelivered
-                : AppTheme.textMuted,
+            color: connected ? AppTheme.statusDelivered : AppTheme.textMuted,
             fontWeight: FontWeight.w500,
           ),
         ),
       ),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
       dense: true,
     );
   }
@@ -321,22 +363,26 @@ class ProfileScreen extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Sign Out'),
         content: const Text(
-            'Are you sure you want to sign out? Your session and in-memory cache will be cleared.'),
+          'Are you sure you want to sign out? Your session and in-memory cache will be cleared.',
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Sign Out')),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sign Out'),
+          ),
         ],
       ),
     );
     if (confirmed == true && context.mounted) {
-      context.read<OrdersProvider>().clearState();
       await auth.signOut();
-      if (context.mounted) {
-        context.read<OrdersProvider>().loadOrders(auth.effectiveUserId);
+      if (context.mounted && auth.error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(auth.error!), backgroundColor: AppTheme.error),
+        );
       }
     }
   }
@@ -361,13 +407,15 @@ class _SectionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textMuted,
-                letterSpacing: 0.8,
-              )),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textMuted,
+              letterSpacing: 0.8,
+            ),
+          ),
           const SizedBox(height: 8),
           ...children,
         ],

@@ -1,8 +1,7 @@
 import '../models/user_model.dart';
 
 /// Abstract contract for authentication operations.
-/// Implementations can be LocalAuthRepository (offline / dev)
-/// or FirebaseAuthRepository (production cloud).
+/// Firebase Authentication operations used by the app.
 abstract class AuthRepository {
   /// Stream of user changes for real-time auth state synchronization
   Stream<UserModel?> get authStateChanges;
@@ -11,10 +10,7 @@ abstract class AuthRepository {
   Future<UserModel?> getCurrentUser();
 
   /// Sign in with email and password
-  Future<UserModel> signIn({
-    required String email,
-    required String password,
-  });
+  Future<UserModel> signIn({required String email, required String password});
 
   /// Register new user with email and password
   Future<UserModel> register({

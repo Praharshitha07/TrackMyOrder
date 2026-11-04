@@ -9,10 +9,7 @@ class FirestoreOrderRepository implements OrderRepository {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   CollectionReference<Map<String, dynamic>> _orders(String userId) {
-    return _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('orders');
+    return _firestore.collection('users').doc(userId).collection('orders');
   }
 
   String get _currentUserId {
@@ -83,7 +80,7 @@ class FirestoreOrderRepository implements OrderRepository {
       throw Exception('Order not found: ${order.id}');
     }
 
-    await document.set(order.toJson());
+    await document.set(order.toJson(), SetOptions(merge: true));
 
     return order;
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 import '../../providers/auth_provider.dart';
 import '../../providers/orders_provider.dart';
 import '../../screens/auth/login_screen.dart';
@@ -10,7 +11,6 @@ import '../../screens/orders/orders_screen.dart';
 import '../../screens/add_order/add_order_screen.dart';
 import '../../screens/order_details/order_details_screen.dart';
 import '../../screens/map/tracking_map_screen.dart';
-import '../../screens/platforms/platforms_screen.dart';
 import '../../screens/profile/profile_screen.dart';
 import '../../screens/settings/settings_screen.dart';
 import '../../screens/analytics/analytics_screen.dart';
@@ -24,18 +24,33 @@ final _shellNavigatorKey = GlobalKey<NavigatorState>();
 GoRouter buildRouter(AuthProvider authProvider) {
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/home',
+    initialLocation: '/auth-loading',
     refreshListenable: authProvider,
     redirect: (context, state) {
-      final canAccess = authProvider.canAccessApp;
-      final isAuthRoute = state.matchedLocation == '/login' ||
+      final location = state.matchedLocation;
+      final isAuthRoute =
+          state.matchedLocation == '/login' ||
           state.matchedLocation == '/register';
 
-      if (!canAccess && !isAuthRoute) return '/login';
-      if (canAccess && isAuthRoute) return '/home';
+      if (authProvider.state == AuthState.unknown) {
+        return location == '/auth-loading' ? null : '/auth-loading';
+      }
+
+      if (!authProvider.canAccessApp && !isAuthRoute) return '/login';
+      if (authProvider.canAccessApp &&
+          (isAuthRoute || location == '/auth-loading')) {
+        return '/home';
+      }
       return null;
     },
     routes: [
+      GoRoute(path: '/', redirect: (context, state) => '/auth-loading'),
+      GoRoute(
+        path: '/auth-loading',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) =>
+            const Scaffold(body: Center(child: CircularProgressIndicator())),
+      ),
       // Auth routes (no shell)
       GoRoute(
         path: '/login',
@@ -66,10 +81,6 @@ GoRouter buildRouter(AuthProvider authProvider) {
             builder: (context, state) => const AnalyticsScreen(),
           ),
           GoRoute(
-            path: '/platforms',
-            builder: (context, state) => const PlatformsScreen(),
-          ),
-          GoRoute(
             path: '/profile',
             builder: (context, state) => const ProfileScreen(),
           ),
@@ -90,8 +101,10 @@ GoRouter buildRouter(AuthProvider authProvider) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) {
           final id = state.pathParameters['id']!;
-          final ordersProvider =
-              Provider.of<OrdersProvider>(context, listen: false);
+          final ordersProvider = Provider.of<OrdersProvider>(
+            context,
+            listen: false,
+          );
           final order = ordersProvider.getOrderById(id);
           if (order == null) {
             return Scaffold(
@@ -107,8 +120,10 @@ GoRouter buildRouter(AuthProvider authProvider) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) {
           final id = state.pathParameters['id']!;
-          final ordersProvider =
-              Provider.of<OrdersProvider>(context, listen: false);
+          final ordersProvider = Provider.of<OrdersProvider>(
+            context,
+            listen: false,
+          );
           final order = ordersProvider.getOrderById(id);
           if (order == null) {
             return Scaffold(

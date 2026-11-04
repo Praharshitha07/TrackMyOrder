@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/orders_provider.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -42,12 +42,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(auth.error ?? 'Registration failed.'),
-          backgroundColor: const Color(0xFFF87171),
+          backgroundColor: AppTheme.error,
         ),
       );
     } else if (ok && mounted) {
-      context.read<OrdersProvider>().clearState();
-      context.read<OrdersProvider>().loadOrders(auth.effectiveUserId);
       context.go('/home');
     }
   }
@@ -71,8 +69,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     icon: const Icon(Icons.arrow_back, size: 18),
                     label: const Text('Back to Sign In'),
                     style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 0, vertical: 4)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 0,
+                        vertical: 4,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 20),
 
@@ -85,18 +86,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           color: AppTheme.electricLime.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.person_add_outlined,
-                            color: AppTheme.electricLime, size: 24),
+                        child: const Icon(
+                          Icons.person_add_outlined,
+                          color: AppTheme.electricLime,
+                          size: 24,
+                        ),
                       ),
                       const SizedBox(width: 14),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Create Account',
-                              style:
-                                  Theme.of(context).textTheme.headlineMedium),
-                          Text('Start tracking your orders',
-                              style: Theme.of(context).textTheme.bodyMedium),
+                          Text(
+                            'Create Account',
+                            style: Theme.of(context).textTheme.headlineMedium,
+                          ),
+                          Text(
+                            'Start tracking your orders',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
                         ],
                       ),
                     ],
@@ -127,7 +134,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             prefixIcon: Icon(Icons.email_outlined),
                           ),
                           validator: (v) {
-                            if (v == null || v.isEmpty) return 'Email is required';
+                            if (v == null || v.isEmpty) {
+                              return 'Email is required';
+                            }
                             if (!v.contains('@')) return 'Enter a valid email';
                             return null;
                           },
@@ -141,15 +150,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             prefixIcon: const Icon(Icons.lock_outline),
                             helperText: 'At least 6 characters',
                             suffixIcon: IconButton(
-                              icon: Icon(_obscurePass
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined),
+                              icon: Icon(
+                                _obscurePass
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                              ),
                               onPressed: () =>
                                   setState(() => _obscurePass = !_obscurePass),
                             ),
                           ),
                           validator: (v) {
-                            if (v == null || v.isEmpty) return 'Password is required';
+                            if (v == null || v.isEmpty) {
+                              return 'Password is required';
+                            }
                             if (v.length < 6) return 'At least 6 characters';
                             return null;
                           },
@@ -162,15 +175,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             labelText: 'Confirm password',
                             prefixIcon: const Icon(Icons.lock_outline),
                             suffixIcon: IconButton(
-                              icon: Icon(_obscureConfirm
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined),
+                              icon: Icon(
+                                _obscureConfirm
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                              ),
                               onPressed: () => setState(
-                                  () => _obscureConfirm = !_obscureConfirm),
+                                () => _obscureConfirm = !_obscureConfirm,
+                              ),
                             ),
                           ),
                           validator: (v) {
-                            if (v != _passCtrl.text) return 'Passwords do not match';
+                            if (v != _passCtrl.text) {
+                              return 'Passwords do not match';
+                            }
                             return null;
                           },
                         ),
@@ -184,8 +202,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     height: 20,
                                     width: 20,
                                     child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: AppTheme.midnightNavy),
+                                      strokeWidth: 2,
+                                      color: AppTheme.midnightNavy,
+                                    ),
                                   )
                                 : const Text('Create Account'),
                           ),
@@ -196,7 +215,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   const SizedBox(height: 20),
                   Center(
                     child: Text(
-                      'Your data is stored locally on this device.',
+                      'Your orders are saved to your authenticated account.',
                       style: Theme.of(context).textTheme.bodySmall,
                       textAlign: TextAlign.center,
                     ),
