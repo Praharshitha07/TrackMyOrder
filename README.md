@@ -8,6 +8,26 @@ Track My Order is a Flutter-based application designed to help users manage and 
 
 💻 **GitHub Repository:** https://github.com/Praharshitha07/TrackMyOrder
 
+## 🌍 SDG Relevance
+
+Track My Order contributes to the following United Nations Sustainable Development Goals (SDGs):
+
+- **SDG 9 – Industry, Innovation and Infrastructure:** Uses modern technologies such as Flutter and Firebase to develop a centralized digital solution for online order management and tracking.
+
+- **SDG 12 – Responsible Consumption and Production:** Helps users organize their online purchases, monitor delivery progress, and maintain better visibility of their shopping activities.
+
+- **SDG 8 – Decent Work and Economic Growth:** Demonstrates how digital technology can improve efficiency and simplify everyday e-commerce-related activities.
+
+## 🤝 Social Impact
+
+- Provides a single platform to manage orders from multiple shopping platforms.
+- Reduces the inconvenience of switching between different applications.
+- Saves time by keeping order information organized in one place.
+- Helps users monitor delivery progress through an organized tracking timeline.
+- Improves accessibility through a responsive web and mobile application.
+- Provides a convenient way to maintain and manage personal order records.
+- Demonstrates how technology can simplify everyday online shopping activities.
+
 ## ✨ Features
 
 - **User Authentication:** Secure login and registration using Firebase Authentication.
