@@ -40,6 +40,17 @@ Track My Order contributes to the following United Nations Sustainable Developme
 - **Cloud Storage:** Store user orders using Cloud Firestore.
 - **Responsive Interface:** Supports Android and web platforms.
 
+## 🎨 UI/UX Design
+
+Track My Order follows user-centered design principles to provide a simple and intuitive experience.
+
+- **Visual Hierarchy:** Highlights important information and actions clearly.
+- **Consistency:** Maintains uniform layouts, typography, icons, and components.
+- **Simplicity:** Uses clean layouts and organized content to reduce complexity.
+- **Responsive Design:** Adapts to different screen sizes across mobile and web.
+- **Easy Navigation:** Provides a smooth and understandable navigation flow.
+- **Usability:** Ensures clear interactions, readable content, and helpful feedback.
+
 ## 🛠️ Technologies Used
 
 | Technology | Purpose |
